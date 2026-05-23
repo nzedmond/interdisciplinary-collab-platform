@@ -315,13 +315,14 @@ Development should follow an iterative process:
 3. integrate recommendation systems,
 4. evaluate system effectiveness,
 5. refine based on feedback and experimentation.
-```
 
 # Project Philosophy
 
   This platform prioritizes:
-    - interdisciplinary collaboration,
-    - explainable recommendations,
-    - accessibility,
-    - clean modular architecture,
-    - research-grade experimentation.
+  - interdisciplinary collaboration,
+  - explainable recommendations,
+  - accessibility,
+  - clean modular architecture,
+  - research-grade experimentation.
+```
+
