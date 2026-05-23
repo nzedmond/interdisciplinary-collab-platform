@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Bookmark, BriefcaseBusiness, Clock, GraduationCap, Sparkles, Users } from "lucide-react";
 import type { Project } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -69,10 +70,13 @@ export function ProjectCard({ project }: ProjectCardProps) {
       </div>
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-        <button className="focus-ring inline-flex items-center gap-2 rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white transition hover:bg-moss">
+        <Link
+          href={`/projects/${project.id}`}
+          className="focus-ring inline-flex items-center gap-2 rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white transition hover:bg-moss"
+        >
           <Sparkles className="h-4 w-4" />
-          Apply
-        </button>
+          View details
+        </Link>
         <button className="focus-ring inline-flex items-center gap-2 rounded-md border border-ink/15 px-4 py-2 text-sm font-semibold text-ink transition hover:border-moss hover:text-moss">
           <Bookmark className="h-4 w-4" />
           Save
