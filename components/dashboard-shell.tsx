@@ -1,15 +1,55 @@
 "use client";
 
 import { BarChart3, Bell, Filter, LayoutDashboard, Search, ShieldCheck, UserRound } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ProjectCard } from "@/components/project-card";
-import { applications, categories, currentUser, departments, projects } from "@/lib/data";
+import { applications, categories, currentUser, departments } from "@/lib/data";
+import type { Project } from "@/lib/types";
 import { statusLabel } from "@/lib/utils";
 
 export function DashboardShell() {
+  const [projects, setProjects] = useState<Project[]>([]);
   const [query, setQuery] = useState("");
   const [department, setDepartment] = useState(departments[0]);
   const [category, setCategory] = useState(categories[0]);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(true);
+  const [projectError, setProjectError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadProjects() {
+      try {
+        setIsLoadingProjects(true);
+        setProjectError(null);
+
+        const response = await fetch("/api/projects", {
+          signal: controller.signal
+        });
+
+        if (!response.ok) {
+          throw new Error("Project list could not be loaded.");
+        }
+
+        const data = (await response.json()) as { projects: Project[] };
+        setProjects(data.projects);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+
+        setProjectError("Project list could not be loaded.");
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoadingProjects(false);
+        }
+      }
+    }
+
+    loadProjects();
+
+    return () => controller.abort();
+  }, []);
 
   const filteredProjects = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -35,10 +75,13 @@ export function DashboardShell() {
 
       return matchesQuery && matchesDepartment && matchesCategory;
     });
-  }, [category, department, query]);
+  }, [category, department, projects, query]);
 
   const openProjects = projects.filter((project) => project.status === "open").length;
-  const averageMatch = Math.round(projects.reduce((sum, project) => sum + project.matchScore, 0) / projects.length);
+  const averageMatch =
+    projects.length > 0
+      ? Math.round(projects.reduce((sum, project) => sum + project.matchScore, 0) / projects.length)
+      : 0;
 
   return (
     <main className="mx-auto flex w-full max-w-7xl gap-6 px-4 py-4 sm:px-6 lg:px-8">
@@ -149,11 +192,25 @@ export function DashboardShell() {
               </div>
             </section>
 
-            {filteredProjects.map((project) => (
-              <ProjectCard key={project.id} project={project} />
-            ))}
+            {isLoadingProjects ? (
+              <section className="rounded-lg border border-ink/10 bg-white p-8 text-center shadow-soft">
+                <h2 className="text-lg font-semibold text-ink">Loading projects</h2>
+                <p className="mt-2 text-sm text-ink/65">Fetching the latest open collaborations.</p>
+              </section>
+            ) : null}
 
-            {filteredProjects.length === 0 ? (
+            {projectError ? (
+              <section className="rounded-lg border border-coral/30 bg-white p-8 text-center shadow-soft">
+                <h2 className="text-lg font-semibold text-ink">Projects unavailable</h2>
+                <p className="mt-2 text-sm text-ink/65">{projectError}</p>
+              </section>
+            ) : null}
+
+            {!isLoadingProjects && !projectError
+              ? filteredProjects.map((project) => <ProjectCard key={project.id} project={project} />)
+              : null}
+
+            {!isLoadingProjects && !projectError && filteredProjects.length === 0 ? (
               <section className="rounded-lg border border-ink/10 bg-white p-8 text-center shadow-soft">
                 <h2 className="text-lg font-semibold text-ink">No matching projects</h2>
                 <p className="mt-2 text-sm text-ink/65">Try a broader department, category, or keyword.</p>
