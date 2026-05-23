@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   ArrowLeft,
-  Bookmark,
   BriefcaseBusiness,
   CalendarDays,
   CheckCircle2,
@@ -11,6 +10,7 @@ import {
   Sparkles,
   Users
 } from "lucide-react";
+import { SaveProjectButton } from "@/components/save-project-button";
 import { getProjectById } from "@/lib/projects";
 import { cn } from "@/lib/utils";
 
@@ -98,10 +98,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
             <Sparkles className="h-4 w-4" />
             Apply
           </Link>
-          <button className="focus-ring inline-flex items-center gap-2 rounded-md border border-ink/15 px-4 py-2 text-sm font-semibold text-ink transition hover:border-moss hover:text-moss">
-            <Bookmark className="h-4 w-4" />
-            Save
-          </button>
+          <SaveProjectButton projectId={project.id} />
         </div>
       </section>
 

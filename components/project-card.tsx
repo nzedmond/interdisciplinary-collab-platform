@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 
 type ProjectCardProps = {
   project: Project;
+  isSaved: boolean;
+  onToggleSaved: (projectId: string) => void;
 };
 
 const statusStyles = {
@@ -13,7 +15,7 @@ const statusStyles = {
   filled: "bg-ink/10 text-ink"
 };
 
-export function ProjectCard({ project }: ProjectCardProps) {
+export function ProjectCard({ project, isSaved, onToggleSaved }: ProjectCardProps) {
   return (
     <article className="rounded-lg border border-ink/10 bg-white p-5 shadow-soft">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -77,9 +79,19 @@ export function ProjectCard({ project }: ProjectCardProps) {
           <Sparkles className="h-4 w-4" />
           View details
         </Link>
-        <button className="focus-ring inline-flex items-center gap-2 rounded-md border border-ink/15 px-4 py-2 text-sm font-semibold text-ink transition hover:border-moss hover:text-moss">
-          <Bookmark className="h-4 w-4" />
-          Save
+        <button
+          type="button"
+          onClick={() => onToggleSaved(project.id)}
+          aria-pressed={isSaved}
+          className={cn(
+            "focus-ring inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-semibold transition",
+            isSaved
+              ? "border-moss bg-moss/10 text-moss"
+              : "border-ink/15 text-ink hover:border-moss hover:text-moss"
+          )}
+        >
+          <Bookmark className={cn("h-4 w-4", isSaved ? "fill-moss" : "")} />
+          {isSaved ? "Saved" : "Save"}
         </button>
       </div>
     </article>

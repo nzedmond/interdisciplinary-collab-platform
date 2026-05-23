@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ProjectCard } from "@/components/project-card";
 import { applications, categories, currentUser, departments } from "@/lib/data";
 import type { Project } from "@/lib/types";
+import { useSavedProjects } from "@/lib/use-saved-projects";
 import { statusLabel } from "@/lib/utils";
 
 export function DashboardShell() {
@@ -14,6 +15,7 @@ export function DashboardShell() {
   const [category, setCategory] = useState(categories[0]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
   const [projectError, setProjectError] = useState<string | null>(null);
+  const { savedProjectIds, toggleSavedProject } = useSavedProjects();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -143,8 +145,8 @@ export function DashboardShell() {
               <p className="mt-1 text-2xl font-bold text-ink">{openProjects}</p>
             </div>
             <div className="rounded-lg border border-ink/10 bg-paper p-4">
-              <p className="text-xs font-semibold uppercase text-ink/50">Active applications</p>
-              <p className="mt-1 text-2xl font-bold text-ink">{applications.length}</p>
+              <p className="text-xs font-semibold uppercase text-ink/50">Saved projects</p>
+              <p className="mt-1 text-2xl font-bold text-ink">{savedProjectIds.length}</p>
             </div>
           </div>
         </header>
@@ -207,7 +209,14 @@ export function DashboardShell() {
             ) : null}
 
             {!isLoadingProjects && !projectError
-              ? filteredProjects.map((project) => <ProjectCard key={project.id} project={project} />)
+              ? filteredProjects.map((project) => (
+                  <ProjectCard
+                    key={project.id}
+                    project={project}
+                    isSaved={savedProjectIds.includes(project.id)}
+                    onToggleSaved={toggleSavedProject}
+                  />
+                ))
               : null}
 
             {!isLoadingProjects && !projectError && filteredProjects.length === 0 ? (
