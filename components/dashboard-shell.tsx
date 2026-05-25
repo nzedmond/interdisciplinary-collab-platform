@@ -1,6 +1,7 @@
 "use client";
 
-import { BarChart3, Bell, Filter, LayoutDashboard, Search, ShieldCheck, UserRound } from "lucide-react";
+import Link from "next/link";
+import { BarChart3, Bell, Filter, LayoutDashboard, Plus, Search, ShieldCheck, UserRound } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ProjectCard } from "@/components/project-card";
 import { applications, categories, currentUser, departments } from "@/lib/data";
@@ -129,10 +130,19 @@ export function DashboardShell() {
                 Browse open academic, creative, and technical projects matched to your skills, interests, and goals.
               </p>
             </div>
-            <button className="focus-ring inline-flex items-center gap-2 rounded-md bg-coral px-4 py-2 text-sm font-semibold text-white transition hover:bg-ink">
-              <UserRound className="h-4 w-4" />
-              Profile
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/projects/new"
+                className="focus-ring inline-flex items-center gap-2 rounded-md bg-coral px-4 py-2 text-sm font-semibold text-white transition hover:bg-ink"
+              >
+                <Plus className="h-4 w-4" />
+                Post project
+              </Link>
+              <button className="focus-ring inline-flex items-center gap-2 rounded-md border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-moss hover:text-moss">
+                <UserRound className="h-4 w-4" />
+                Profile
+              </button>
+            </div>
           </div>
 
           <div className="mt-6 grid gap-3 md:grid-cols-3">
