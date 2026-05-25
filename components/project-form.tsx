@@ -4,6 +4,8 @@ import Link from "next/link";
 import { CheckCircle2, Send } from "lucide-react";
 import { useState } from "react";
 import { categories, departments } from "@/lib/data";
+import { saveProjectDraft } from "@/lib/project-drafts";
+import type { Project } from "@/lib/types";
 
 function splitList(value: string) {
   return value
@@ -49,7 +51,7 @@ export function ProjectForm() {
       })
     });
 
-    const data = (await response.json()) as { error?: string; project?: { id: string } };
+    const data = (await response.json()) as { error?: string; project?: Project };
 
     if (!response.ok || !data.project) {
       setError(data.error ?? "Project could not be posted.");
@@ -57,6 +59,7 @@ export function ProjectForm() {
       return;
     }
 
+    saveProjectDraft(data.project);
     setCreatedProjectId(data.project.id);
     setIsSubmitting(false);
   }
@@ -72,10 +75,10 @@ export function ProjectForm() {
               This MVP generated draft ID {createdProjectId}. The next database milestone will persist new postings.
             </p>
             <Link
-              href="/"
+              href="/projects/mine"
               className="focus-ring mt-5 inline-flex items-center rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white transition hover:bg-moss"
             >
-              Back to dashboard
+              View my projects
             </Link>
           </div>
         </div>

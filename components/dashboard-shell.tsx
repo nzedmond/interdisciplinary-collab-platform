@@ -1,7 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { BarChart3, Bell, Filter, LayoutDashboard, Plus, Search, ShieldCheck, UserRound } from "lucide-react";
+import {
+  BarChart3,
+  Bell,
+  BriefcaseBusiness,
+  Filter,
+  LayoutDashboard,
+  Plus,
+  Search,
+  ShieldCheck,
+  UserRound
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ProjectCard } from "@/components/project-card";
 import { applications, categories, currentUser, departments } from "@/lib/data";
@@ -137,6 +147,13 @@ export function DashboardShell() {
               >
                 <Plus className="h-4 w-4" />
                 Post project
+              </Link>
+              <Link
+                href="/projects/mine"
+                className="focus-ring inline-flex items-center gap-2 rounded-md border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-moss hover:text-moss"
+              >
+                <BriefcaseBusiness className="h-4 w-4" />
+                My projects
               </Link>
               <button className="focus-ring inline-flex items-center gap-2 rounded-md border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-moss hover:text-moss">
                 <UserRound className="h-4 w-4" />
