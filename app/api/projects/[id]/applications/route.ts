@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getProjectById } from "@/lib/projects";
+import { createApplication, getProjectById } from "@/lib/project-repository";
 
 type ApplicationRouteContext = {
   params: Promise<{
@@ -9,7 +9,7 @@ type ApplicationRouteContext = {
 
 export async function POST(request: Request, { params }: ApplicationRouteContext) {
   const { id } = await params;
-  const project = getProjectById(id);
+  const project = await getProjectById(id);
 
   if (!project) {
     return NextResponse.json({ error: "Project not found." }, { status: 404 });
@@ -34,14 +34,11 @@ export async function POST(request: Request, { params }: ApplicationRouteContext
     );
   }
 
-  return NextResponse.json(
-    {
-      application: {
-        id: `mock-${project.id}`,
-        projectId: project.id,
-        status: "submitted"
-      }
-    },
-    { status: 201 }
-  );
+  const application = await createApplication({
+    projectId: project.id,
+    message: body.message,
+    availability: body.availability
+  });
+
+  return NextResponse.json({ application }, { status: 201 });
 }

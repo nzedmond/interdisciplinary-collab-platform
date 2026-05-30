@@ -4,7 +4,6 @@ import Link from "next/link";
 import { CheckCircle2, Send } from "lucide-react";
 import { useState } from "react";
 import { categories, departments } from "@/lib/data";
-import { saveProjectDraft } from "@/lib/project-drafts";
 import type { Project } from "@/lib/types";
 
 function splitList(value: string) {
@@ -59,7 +58,6 @@ export function ProjectForm() {
       return;
     }
 
-    saveProjectDraft(data.project);
     setCreatedProjectId(data.project.id);
     setIsSubmitting(false);
   }
@@ -72,7 +70,7 @@ export function ProjectForm() {
           <div>
             <h2 className="text-lg font-semibold text-ink">Project draft created</h2>
             <p className="mt-2 text-sm leading-6 text-ink/70">
-              This MVP generated draft ID {createdProjectId}. The next database milestone will persist new postings.
+              Project {createdProjectId} has been saved to the database and is ready to review.
             </p>
             <Link
               href="/projects/mine"

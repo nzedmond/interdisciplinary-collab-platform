@@ -12,7 +12,7 @@ type ApplyPageProps = {
 
 export default async function ApplyPage({ params }: ApplyPageProps) {
   const { id } = await params;
-  const project = getProjectById(id);
+  const project = await getProjectById(id);
 
   if (!project) {
     notFound();

@@ -14,8 +14,8 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ProjectCard } from "@/components/project-card";
-import { applications, categories, currentUser, departments } from "@/lib/data";
-import type { Project } from "@/lib/types";
+import { categories, currentUser, departments } from "@/lib/data";
+import type { Application, Project } from "@/lib/types";
 import { useSavedProjects } from "@/lib/use-saved-projects";
 import { statusLabel } from "@/lib/utils";
 
@@ -26,6 +26,7 @@ export function DashboardShell() {
   const [category, setCategory] = useState(categories[0]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
   const [projectError, setProjectError] = useState<string | null>(null);
+  const [applications, setApplications] = useState<Application[]>([]);
   const { savedProjectIds, toggleSavedProject } = useSavedProjects();
 
   useEffect(() => {
@@ -60,6 +61,31 @@ export function DashboardShell() {
     }
 
     loadProjects();
+
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadApplications() {
+      try {
+        const response = await fetch("/api/applications", {
+          signal: controller.signal
+        });
+
+        if (!response.ok) {
+          throw new Error("Applications could not be loaded.");
+        }
+
+        const data = (await response.json()) as { applications: Application[] };
+        setApplications(data.applications);
+      } catch {
+        setApplications([]);
+      }
+    }
+
+    loadApplications();
 
     return () => controller.abort();
   }, []);

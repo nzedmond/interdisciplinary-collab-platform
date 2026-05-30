@@ -2,41 +2,63 @@
 
 import { useEffect, useState } from "react";
 
-const savedProjectsKey = "collab-commons:saved-projects";
-
 export function useSavedProjects() {
   const [savedProjectIds, setSavedProjectIds] = useState<string[]>([]);
-  const [hasLoadedSavedProjects, setHasLoadedSavedProjects] = useState(false);
 
   useEffect(() => {
-    const storedValue = window.localStorage.getItem(savedProjectsKey);
+    const controller = new AbortController();
 
-    if (storedValue) {
+    async function loadSavedProjects() {
       try {
-        const parsedValue = JSON.parse(storedValue) as string[];
-        setSavedProjectIds(Array.isArray(parsedValue) ? parsedValue : []);
+        const response = await fetch("/api/saved-projects", {
+          signal: controller.signal
+        });
+
+        if (!response.ok) {
+          throw new Error("Saved projects could not be loaded.");
+        }
+
+        const data = (await response.json()) as { savedProjectIds: string[] };
+        setSavedProjectIds(data.savedProjectIds);
       } catch {
         setSavedProjectIds([]);
       }
     }
 
-    setHasLoadedSavedProjects(true);
+    loadSavedProjects();
+
+    return () => controller.abort();
   }, []);
 
-  useEffect(() => {
-    if (!hasLoadedSavedProjects) {
-      return;
+  async function toggleSavedProject(projectId: string) {
+    const isSaved = savedProjectIds.includes(projectId);
+    const nextSavedProjectIds = isSaved
+      ? savedProjectIds.filter((currentId) => currentId !== projectId)
+      : [...savedProjectIds, projectId];
+
+    setSavedProjectIds(nextSavedProjectIds);
+
+    try {
+      const response = await fetch("/api/saved-projects", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          projectId,
+          isSaved: !isSaved
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("Saved project could not be updated.");
+      }
+
+      const data = (await response.json()) as { savedProjectIds: string[] };
+      setSavedProjectIds(data.savedProjectIds);
+    } catch {
+      setSavedProjectIds(savedProjectIds);
     }
-
-    window.localStorage.setItem(savedProjectsKey, JSON.stringify(savedProjectIds));
-  }, [hasLoadedSavedProjects, savedProjectIds]);
-
-  function toggleSavedProject(projectId: string) {
-    setSavedProjectIds((currentIds) =>
-      currentIds.includes(projectId)
-        ? currentIds.filter((currentId) => currentId !== projectId)
-        : [...currentIds, projectId]
-    );
   }
 
   return {

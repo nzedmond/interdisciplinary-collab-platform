@@ -26,7 +26,7 @@ export default function MyProjectsPage() {
         <p className="text-sm font-semibold text-moss">Project owner workspace</p>
         <h1 className="mt-2 text-3xl font-bold tracking-normal text-ink">My projects</h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-ink/70">
-          Review project drafts created during this MVP flow before database persistence is connected.
+          Review projects you have posted to the database during this MVP flow.
         </p>
       </section>
 

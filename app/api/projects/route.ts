@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
-import { getProjects } from "@/lib/projects";
+import { createProject, getProjects } from "@/lib/project-repository";
 import type { Project } from "@/lib/types";
 
 export async function GET() {
-  return NextResponse.json({ projects: getProjects() });
+  const projects = await getProjects();
+
+  return NextResponse.json({ projects });
 }
 
 export async function POST(request: Request) {
@@ -28,24 +30,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Add at least one required skill." }, { status: 400 });
   }
 
-  const project: Project = {
-    id: `draft-${Date.now()}`,
+  const project = await createProject({
     title: body.title.trim(),
-    owner: body.owner?.trim() || "Maya Johnson",
-    ownerRole: body.ownerRole ?? "Student",
+    description: body.description.trim(),
     departments: body.departments,
     category: body.category?.trim() || "Research + Public Scholarship",
-    description: body.description.trim(),
     requiredSkills: body.requiredSkills,
     helpfulSkills: body.helpfulSkills ?? [],
     commitment: body.commitment?.trim() || "3-5 hrs/week",
     duration: body.duration?.trim() || "Semester",
-    goals: body.goals && body.goals.length > 0 ? body.goals : ["Recruit collaborators"],
-    status: "open",
-    applicants: 0,
-    matchScore: 72,
-    recommendationReason: "Newly posted project. Recommendations will improve once embeddings are connected."
-  };
+    goals: body.goals && body.goals.length > 0 ? body.goals : ["Recruit collaborators"]
+  });
 
   return NextResponse.json({ project }, { status: 201 });
 }

@@ -56,7 +56,7 @@ export function ApplicationForm({ projectId }: ApplicationFormProps) {
           <div>
             <h2 className="text-lg font-semibold text-ink">Application submitted</h2>
             <p className="mt-2 text-sm leading-6 text-ink/70">
-              Your interest has been recorded for this MVP. The next milestone can store this in the database.
+              Your interest has been saved to the database and now appears in your applications list.
             </p>
           </div>
         </div>

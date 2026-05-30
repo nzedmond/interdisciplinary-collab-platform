@@ -9,7 +9,7 @@ type ProjectRouteContext = {
 
 export async function GET(_request: Request, { params }: ProjectRouteContext) {
   const { id } = await params;
-  const project = getProjectById(id);
+  const project = await getProjectById(id);
 
   if (!project) {
     return NextResponse.json({ error: "Project not found." }, { status: 404 });
