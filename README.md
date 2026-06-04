@@ -12,7 +12,7 @@ This MVP scaffolds the first usable slice of the product: students can browse ca
 - Application status panel
 - Recommendation explanation surface
 - Prisma data model for users, profiles, skills, projects, saved projects, applications, and future pgvector embeddings
-- API route stub for project listings
+- Prisma-backed API routes for project listings, project creation, saved projects, and applications
 
 ## Tech Stack
 
@@ -55,13 +55,15 @@ npm run prisma:generate
 npm run prisma:migrate
 ```
 
-The current UI uses local seed data so the product can be reviewed before the database is connected.
+The app now reads and writes projects, saved projects, and applications through Prisma. Until authentication is connected, these flows use a demo user and bootstrap the initial demo projects on first database access.
+
+If you do not already have a local PostgreSQL server running, use a hosted development database such as Neon or Supabase and paste its connection string into `.env`.
 
 ## Suggested Next Milestones
 
 1. Wire Auth.js university-email login and role-based sessions.
-2. Replace mock data with Prisma queries and mutations.
-3. Add project creation and application submission forms.
+2. Move demo data bootstrapping into a dedicated seed command.
+3. Add project-owner applicant review and application status updates.
 4. Add admin moderation and project verification.
 5. Enable pgvector and store project/user embeddings for semantic matching.
 6. Add analytics for recommendation quality and cross-department collaboration patterns.

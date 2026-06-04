@@ -135,8 +135,8 @@ model SavedProject {
 
 model ProjectVector {
   projectId String   @id
-  // Store embeddings in pgvector once the extension is enabled in the production database.
-  embedding Unsupported("vector")?
+  // Store embedding arrays as JSON until pgvector is enabled for semantic search.
+  embedding Json?
   summary   String
   updatedAt DateTime @updatedAt
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
