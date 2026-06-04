@@ -9,10 +9,10 @@ This MVP scaffolds the first usable slice of the product: students can browse ca
 - Project discovery dashboard with realistic seed data
 - Search and filters for department, category, skill, and topic
 - User profile snapshot with skills and interests
-- Application status panel
+- Application status panel and project-owner applicant review
 - Recommendation explanation surface
 - Prisma data model for users, profiles, skills, projects, saved projects, applications, and future pgvector embeddings
-- Prisma-backed API routes for project listings, project creation, saved projects, and applications
+- Prisma-backed API routes for project listings, project creation, saved projects, applications, and owner status review
 
 ## Tech Stack
 
@@ -53,17 +53,17 @@ Set `DATABASE_URL` in `.env`, then run:
 ```bash
 npm run prisma:generate
 npm run prisma:migrate
+npm run prisma:seed
 ```
 
-The app now reads and writes projects, saved projects, and applications through Prisma. Until authentication is connected, these flows use a demo user and bootstrap the initial demo projects on first database access.
+The app now reads and writes projects, saved projects, and applications through Prisma. Until authentication is connected, these flows use a demo user. Run `npm run prisma:seed` after migrating to load the demo user, profiles, projects, skills, and sample applications.
 
 If you do not already have a local PostgreSQL server running, use a hosted development database such as Neon or Supabase and paste its connection string into `.env`.
 
 ## Suggested Next Milestones
 
 1. Wire Auth.js university-email login and role-based sessions.
-2. Move demo data bootstrapping into a dedicated seed command.
-3. Add project-owner applicant review and application status updates.
-4. Add admin moderation and project verification.
-5. Enable pgvector and store project/user embeddings for semantic matching.
-6. Add analytics for recommendation quality and cross-department collaboration patterns.
+2. Replace dashboard profile data with the authenticated database user.
+3. Add admin moderation and project verification.
+4. Enable pgvector and store project/user embeddings for semantic matching.
+5. Add analytics for recommendation quality and cross-department collaboration patterns.

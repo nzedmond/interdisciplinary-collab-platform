@@ -41,3 +41,10 @@ export type Application = {
   status: "submitted" | "interview" | "accepted" | "declined";
   submittedAt: string;
 };
+
+export type OwnedProjectApplication = Application & {
+  projectId: string;
+  applicantDepartment?: string;
+  applicantMajorOrTitle?: string;
+  message?: string;
+};

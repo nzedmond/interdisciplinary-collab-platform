@@ -1,12 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { BriefcaseBusiness, Clock, Plus } from "lucide-react";
+import { BriefcaseBusiness, Clock, Mail, Plus, UserRoundCheck } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { Project } from "@/lib/types";
+import type { Application, OwnedProjectApplication, Project } from "@/lib/types";
+import { statusLabel } from "@/lib/utils";
+
+const applicationStatuses: Application["status"][] = ["submitted", "interview", "accepted", "declined"];
 
 export function MyProjectsList() {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [applications, setApplications] = useState<OwnedProjectApplication[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
   const [projectError, setProjectError] = useState<string | null>(null);
 
@@ -28,6 +32,19 @@ export function MyProjectsList() {
 
         const data = (await response.json()) as { projects: Project[] };
         setProjects(data.projects);
+
+        const applicationsResponse = await fetch("/api/projects/mine/applications", {
+          signal: controller.signal
+        });
+
+        if (!applicationsResponse.ok) {
+          throw new Error("Applications could not be loaded.");
+        }
+
+        const applicationsData = (await applicationsResponse.json()) as {
+          applications: OwnedProjectApplication[];
+        };
+        setApplications(applicationsData.applications);
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
           return;
@@ -45,6 +62,42 @@ export function MyProjectsList() {
 
     return () => controller.abort();
   }, []);
+
+  async function updateApplicationStatus(applicationId: string, status: Application["status"]) {
+    const previousApplications = applications;
+
+    setApplications((currentApplications) =>
+      currentApplications.map((application) =>
+        application.id === applicationId ? { ...application, status } : application
+      )
+    );
+
+    try {
+      const response = await fetch(`/api/applications/${applicationId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ status })
+      });
+
+      if (!response.ok) {
+        throw new Error("Application status could not be updated.");
+      }
+
+      const data = (await response.json()) as {
+        application: OwnedProjectApplication;
+      };
+
+      setApplications((currentApplications) =>
+        currentApplications.map((application) =>
+          application.id === applicationId ? data.application : application
+        )
+      );
+    } catch {
+      setApplications(previousApplications);
+    }
+  }
 
   if (isLoadingProjects) {
     return (
@@ -118,6 +171,63 @@ export function MyProjectsList() {
                 {skill}
               </span>
             ))}
+          </div>
+
+          <div className="mt-6 border-t border-ink/10 pt-5">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
+              <UserRoundCheck className="h-4 w-4 text-moss" />
+              Applicants
+            </h3>
+            <div className="mt-3 space-y-3">
+              {applications.filter((application) => application.projectId === project.id).length > 0 ? (
+                applications
+                  .filter((application) => application.projectId === project.id)
+                  .map((application) => (
+                    <div key={application.id} className="rounded-lg border border-ink/10 bg-paper p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-ink">{application.applicantName}</p>
+                          <p className="mt-1 text-xs text-ink/60">
+                            {[application.applicantMajorOrTitle, application.applicantDepartment]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </p>
+                        </div>
+                        <label className="flex items-center gap-2 rounded-md border border-ink/15 bg-white px-3 py-2">
+                          <span className="sr-only">Application status</span>
+                          <select
+                            value={application.status}
+                            onChange={(event) =>
+                              updateApplicationStatus(
+                                application.id,
+                                event.target.value as Application["status"]
+                              )
+                            }
+                            className="focus-ring bg-transparent text-sm font-semibold text-ink outline-none"
+                          >
+                            {applicationStatuses.map((status) => (
+                              <option key={status} value={status}>
+                                {statusLabel(status)}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+
+                      {application.message ? (
+                        <p className="mt-3 flex gap-2 text-sm leading-6 text-ink/70">
+                          <Mail className="mt-1 h-4 w-4 shrink-0 text-coral" />
+                          {application.message}
+                        </p>
+                      ) : null}
+                    </div>
+                  ))
+              ) : (
+                <p className="rounded-lg border border-ink/10 bg-paper p-4 text-sm text-ink/65">
+                  No applicants yet.
+                </p>
+              )}
+            </div>
           </div>
         </article>
       ))}

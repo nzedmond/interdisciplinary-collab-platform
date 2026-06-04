@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { currentUser, projects as demoProjects } from "@/lib/data";
-import type { Application, Project } from "@/lib/types";
+import { currentUser } from "@/lib/data";
+import type { Application, OwnedProjectApplication, Project } from "@/lib/types";
 
 const demoUserEmail = "maya.johnson@example.edu";
 
@@ -32,6 +32,22 @@ function mapApplicationStatus(status: string): Application["status"] {
   }
 
   return "submitted";
+}
+
+function toDatabaseApplicationStatus(status: Application["status"]) {
+  if (status === "interview") {
+    return "INTERVIEW";
+  }
+
+  if (status === "accepted") {
+    return "ACCEPTED";
+  }
+
+  if (status === "declined") {
+    return "DECLINED";
+  }
+
+  return "SUBMITTED";
 }
 
 function roleLabel(role: string, majorOrTitle?: string | null): Project["ownerRole"] {
@@ -180,91 +196,7 @@ async function createProjectSkills(projectId: string, skills: string[], required
   );
 }
 
-export async function ensureDemoProjects() {
-  const user = await ensureCurrentUser();
-
-  for (const project of demoProjects) {
-    const owner = await prisma.user.upsert({
-      where: { email: `${project.id}@example.edu` },
-      update: {},
-      create: {
-        email: `${project.id}@example.edu`,
-        name: project.owner,
-        role: project.ownerRole === "Student" ? "STUDENT" : "FACULTY",
-        department: project.departments[0],
-        majorOrTitle: project.ownerRole
-      }
-    });
-
-    await prisma.project.upsert({
-      where: {
-        id: project.id
-      },
-      update: {
-        title: project.title,
-        description: project.description,
-        ownerId: owner.id,
-        category: project.category,
-        departments: project.departments,
-        commitment: project.commitment,
-        duration: project.duration,
-        goals: project.goals,
-        status: project.status.toUpperCase() as "OPEN" | "REVIEWING" | "FILLED"
-      },
-      create: {
-        id: project.id,
-        title: project.title,
-        description: project.description,
-        ownerId: owner.id,
-        category: project.category,
-        departments: project.departments,
-        commitment: project.commitment,
-        duration: project.duration,
-        goals: project.goals,
-        status: project.status.toUpperCase() as "OPEN" | "REVIEWING" | "FILLED"
-      }
-    });
-
-    await createProjectSkills(project.id, project.requiredSkills, true);
-    await createProjectSkills(project.id, project.helpfulSkills, false);
-  }
-
-  await prisma.application.upsert({
-    where: {
-      projectId_applicantId: {
-        projectId: "p-001",
-        applicantId: user.id
-      }
-    },
-    update: {},
-    create: {
-      projectId: "p-001",
-      applicantId: user.id,
-      message: "I would like to contribute data visualization and community research support.",
-      status: "INTERVIEW"
-    }
-  });
-
-  await prisma.application.upsert({
-    where: {
-      projectId_applicantId: {
-        projectId: "p-004",
-        applicantId: user.id
-      }
-    },
-    update: {},
-    create: {
-      projectId: "p-004",
-      applicantId: user.id,
-      message: "I am interested in archive storytelling and consent-centered collection workflows.",
-      status: "SUBMITTED"
-    }
-  });
-}
-
 export async function getProjects() {
-  await ensureDemoProjects();
-
   const projects = await prisma.project.findMany({
     include: {
       owner: true,
@@ -293,14 +225,12 @@ export async function getProjects() {
 }
 
 export async function getProjectById(id: string) {
-  await ensureDemoProjects();
   const project = await fetchProjectById(id);
 
   return project ? mapProject(project) : null;
 }
 
 export async function getOwnedProjects() {
-  await ensureDemoProjects();
   const user = await ensureCurrentUser();
 
   const projects = await prisma.project.findMany({
@@ -344,7 +274,6 @@ export async function createProject(input: {
   duration: string;
   goals: string[];
 }) {
-  await ensureDemoProjects();
   const user = await ensureCurrentUser();
 
   const project = await prisma.project.create({
@@ -373,7 +302,6 @@ export async function createProject(input: {
 }
 
 export async function getSavedProjectIds() {
-  await ensureDemoProjects();
   const user = await ensureCurrentUser();
 
   const savedProjects = await prisma.savedProject.findMany({
@@ -389,7 +317,6 @@ export async function getSavedProjectIds() {
 }
 
 export async function setSavedProject(projectId: string, isSaved: boolean) {
-  await ensureDemoProjects();
   const user = await ensureCurrentUser();
   const project = await fetchProjectById(projectId);
 
@@ -428,7 +355,6 @@ export async function createApplication(input: {
   message: string;
   availability: string;
 }) {
-  await ensureDemoProjects();
   const user = await ensureCurrentUser();
   const project = await fetchProjectById(input.projectId);
 
@@ -458,7 +384,6 @@ export async function createApplication(input: {
 }
 
 export async function getApplicationsForCurrentUser() {
-  await ensureDemoProjects();
   const user = await ensureCurrentUser();
 
   const applications = await prisma.application.findMany({
@@ -481,4 +406,79 @@ export async function getApplicationsForCurrentUser() {
     status: mapApplicationStatus(application.status),
     submittedAt: application.createdAt.toISOString().slice(0, 10)
   }));
+}
+
+export async function getApplicationsForOwnedProjects(): Promise<OwnedProjectApplication[]> {
+  const user = await ensureCurrentUser();
+
+  const applications = await prisma.application.findMany({
+    where: {
+      project: {
+        ownerId: user.id
+      }
+    },
+    include: {
+      project: true,
+      applicant: true
+    },
+    orderBy: {
+      createdAt: "desc"
+    }
+  });
+
+  return applications.map((application) => ({
+    id: application.id,
+    projectId: application.projectId,
+    projectTitle: application.project.title,
+    applicantName: application.applicant.name,
+    applicantDepartment: application.applicant.department ?? undefined,
+    applicantMajorOrTitle: application.applicant.majorOrTitle ?? undefined,
+    message: application.message ?? undefined,
+    status: mapApplicationStatus(application.status),
+    submittedAt: application.createdAt.toISOString().slice(0, 10)
+  }));
+}
+
+export async function updateOwnedProjectApplicationStatus(
+  applicationId: string,
+  status: Application["status"]
+) {
+  const user = await ensureCurrentUser();
+  const application = await prisma.application.findFirst({
+    where: {
+      id: applicationId,
+      project: {
+        ownerId: user.id
+      }
+    }
+  });
+
+  if (!application) {
+    return null;
+  }
+
+  const updatedApplication = await prisma.application.update({
+    where: {
+      id: applicationId
+    },
+    data: {
+      status: toDatabaseApplicationStatus(status)
+    },
+    include: {
+      project: true,
+      applicant: true
+    }
+  });
+
+  return {
+    id: updatedApplication.id,
+    projectId: updatedApplication.projectId,
+    projectTitle: updatedApplication.project.title,
+    applicantName: updatedApplication.applicant.name,
+    applicantDepartment: updatedApplication.applicant.department ?? undefined,
+    applicantMajorOrTitle: updatedApplication.applicant.majorOrTitle ?? undefined,
+    message: updatedApplication.message ?? undefined,
+    status: mapApplicationStatus(updatedApplication.status),
+    submittedAt: updatedApplication.createdAt.toISOString().slice(0, 10)
+  };
 }
