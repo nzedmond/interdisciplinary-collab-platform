@@ -6,6 +6,7 @@ import {
   requireStringArray,
   requireTrimmedString
 } from "@/lib/api";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import { getSessionUserId } from "@/lib/session-user";
 import type { Project } from "@/lib/types";
 
@@ -18,6 +19,15 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const rateLimitResult = enforceRateLimit(request, {
+    bucket: "projects-post",
+    limit: 30,
+    windowMs: 60_000
+  });
+  if (!rateLimitResult.allowed) {
+    return errorResponse(429, `Too many requests. Try again in ${rateLimitResult.retryAfterSeconds} seconds.`);
+  }
+
   const userId = await getSessionUserId();
 
   if (!userId) {

@@ -4,6 +4,7 @@ import {
   getProjectAuthorizationContext
 } from "@/lib/project-repository";
 import { errorResponse, parseJsonBody, requireTrimmedString } from "@/lib/api";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import { getSessionUserId } from "@/lib/session-user";
 
 type ApplicationRouteContext = {
@@ -20,6 +21,15 @@ type CreateApplicationRequest = {
 const availabilityOptions = new Set(["1-3 hrs/week", "3-5 hrs/week", "5-7 hrs/week", "8+ hrs/week"]);
 
 export async function POST(request: Request, { params }: ApplicationRouteContext) {
+  const rateLimitResult = enforceRateLimit(request, {
+    bucket: "project-applications-post",
+    limit: 40,
+    windowMs: 60_000
+  });
+  if (!rateLimitResult.allowed) {
+    return errorResponse(429, `Too many requests. Try again in ${rateLimitResult.retryAfterSeconds} seconds.`);
+  }
+
   const userId = await getSessionUserId();
 
   if (!userId) {

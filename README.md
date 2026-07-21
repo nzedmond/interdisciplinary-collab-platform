@@ -54,6 +54,19 @@ This app now uses Auth.js session-based protection for project posting, saved pr
 - Use a `.edu` email address for the credentials sign-in flow
 - `AUTH_SECRET` and `DATABASE_URL` are required in all environments (no development fallback sign-in)
 
+## Production deployment checklist (Vercel + Neon/Supabase)
+
+1. Add required environment variables in your deploy environment:
+   - `DATABASE_URL`
+   - `AUTH_SECRET`
+   - `AUTH_URL` (set to your deployed app URL)
+2. Provision and migrate your PostgreSQL database before first traffic:
+   - `npm run prisma:generate`
+   - `npm run prisma:migrate`
+   - `npm run prisma:seed` (optional for sample data)
+3. Run post-deploy smoke checks:
+   - `BASE_URL=https://your-app-domain npm run smoke:api`
+
 ## Database Setup
 
 Set `DATABASE_URL` in `.env`, then run:
@@ -67,6 +80,11 @@ npm run prisma:seed
 The app reads and writes projects, saved projects, applications, and profile updates through Prisma. Run `npm run prisma:seed` after migrating to load sample users, profiles, projects, skills, and applications.
 
 If you do not already have a local PostgreSQL server running, use a hosted development database such as Neon or Supabase and paste its connection string into `.env`.
+
+## Runtime guardrails
+
+- Auth-protected write endpoints enforce rate limits and return HTTP `429` when thresholds are exceeded.
+- Security-relevant rate-limit blocks are logged server-side for operational visibility.
 
 ## Suggested Next Milestones
 

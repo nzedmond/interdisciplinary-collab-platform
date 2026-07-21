@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "smoke:api": "bash scripts/smoke-api.sh",
     "test:api": "vitest run \"app/api/critical-flow.test.js\" \"app/api/projects/route.test.js\" \"app/api/projects/[id]/route.test.js\" \"app/api/profile/route.test.js\" \"app/api/saved-projects/route.test.js\" \"app/api/projects/[id]/applications/route.test.js\" \"app/api/applications/[id]/route.test.js\"",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSavedProjectIds, setSavedProject } from "@/lib/project-repository";
 import { errorResponse, parseJsonBody, requireBoolean, requireTrimmedString } from "@/lib/api";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import { getSessionUserId } from "@/lib/session-user";
 
 export async function GET() {
@@ -16,6 +17,15 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
+  const rateLimitResult = enforceRateLimit(request, {
+    bucket: "saved-projects-put",
+    limit: 80,
+    windowMs: 60_000
+  });
+  if (!rateLimitResult.allowed) {
+    return errorResponse(429, `Too many requests. Try again in ${rateLimitResult.retryAfterSeconds} seconds.`);
+  }
+
   const userId = await getSessionUserId();
 
   if (!userId) {

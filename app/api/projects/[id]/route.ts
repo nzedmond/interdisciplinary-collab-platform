@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { errorResponse, parseJsonBody, requireTrimmedString } from "@/lib/api";
 import { getProjectById } from "@/lib/projects";
 import { updateOwnedProjectStatus } from "@/lib/project-repository";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import { getSessionUserId } from "@/lib/session-user";
 import type { Project } from "@/lib/types";
 
@@ -29,6 +30,15 @@ function isProjectStatus(value: string): value is Project["status"] {
 }
 
 export async function PATCH(request: Request, { params }: ProjectRouteContext) {
+  const rateLimitResult = enforceRateLimit(request, {
+    bucket: "projects-patch",
+    limit: 40,
+    windowMs: 60_000
+  });
+  if (!rateLimitResult.allowed) {
+    return errorResponse(429, `Too many requests. Try again in ${rateLimitResult.retryAfterSeconds} seconds.`);
+  }
+
   const userId = await getSessionUserId();
 
   if (!userId) {
