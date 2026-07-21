@@ -52,6 +52,7 @@ This app now uses Auth.js session-based protection for project posting, saved pr
 
 - Sign in at [http://localhost:3000/api/auth/signin](http://localhost:3000/api/auth/signin)
 - Use a `.edu` email address for the credentials sign-in flow
+- `AUTH_SECRET` and `DATABASE_URL` are required in all environments (no development fallback sign-in)
 
 ## Database Setup
 
@@ -63,7 +64,7 @@ npm run prisma:migrate
 npm run prisma:seed
 ```
 
-The app now reads and writes projects, saved projects, and applications through Prisma. Until authentication is connected, these flows use a demo user. Run `npm run prisma:seed` after migrating to load the demo user, profiles, projects, skills, and sample applications.
+The app reads and writes projects, saved projects, applications, and profile updates through Prisma. Run `npm run prisma:seed` after migrating to load sample users, profiles, projects, skills, and applications.
 
 If you do not already have a local PostgreSQL server running, use a hosted development database such as Neon or Supabase and paste its connection string into `.env`.
 

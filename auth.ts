@@ -3,7 +3,16 @@ import Credentials from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 
 type SessionRole = "student" | "faculty" | "admin";
-const hasDatabaseUrl = Boolean(process.env.DATABASE_URL);
+const authSecret = process.env.AUTH_SECRET;
+const databaseUrl = process.env.DATABASE_URL;
+
+if (!authSecret) {
+  throw new Error("AUTH_SECRET is required. Set AUTH_SECRET in your environment.");
+}
+
+if (!databaseUrl) {
+  throw new Error("DATABASE_URL is required. Set DATABASE_URL in your environment.");
+}
 
 function toSessionRole(role: string): SessionRole {
   if (role === "FACULTY") {
@@ -18,7 +27,7 @@ function toSessionRole(role: string): SessionRole {
 }
 
 export const { handlers, auth } = NextAuth({
-  secret: process.env.AUTH_SECRET ?? "development-only-auth-secret",
+  secret: authSecret,
   session: {
     strategy: "jwt"
   },
@@ -42,15 +51,6 @@ export const { handlers, auth } = NextAuth({
 
         if (!email.endsWith(".edu") || !name) {
           return null;
-        }
-
-        if (!hasDatabaseUrl) {
-          return {
-            id: email,
-            email,
-            name,
-            role: "student" as const
-          };
         }
 
         const user = await prisma.user.upsert({
@@ -81,7 +81,7 @@ export const { handlers, auth } = NextAuth({
         token.role = user.role;
       }
 
-      if (token.email && hasDatabaseUrl) {
+      if (token.email) {
         const dbUser = await prisma.user.findUnique({
           where: { email: token.email },
           select: {

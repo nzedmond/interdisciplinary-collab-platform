@@ -10,7 +10,7 @@ export async function getSessionUserId() {
 
   const email = session?.user?.email?.trim().toLowerCase();
 
-  if (!email || !process.env.DATABASE_URL) {
+  if (!email) {
     return null;
   }
 
