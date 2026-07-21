@@ -59,6 +59,58 @@ export function requireBoolean(
   return { ok: true, value };
 }
 
+export function optionalTrimmedString(
+  value: unknown,
+  fieldLabel: string,
+  options?: { maxLength?: number }
+): { ok: true; value: string | null } | { ok: false; error: string } {
+  if (value === undefined || value === null) {
+    return { ok: true, value: null };
+  }
+
+  if (typeof value !== "string") {
+    return { ok: false, error: `${fieldLabel} must be text.` };
+  }
+
+  const normalized = value.trim();
+  if (!normalized) {
+    return { ok: true, value: null };
+  }
+
+  const maxLength = options?.maxLength;
+  if (typeof maxLength === "number" && normalized.length > maxLength) {
+    return { ok: false, error: `${fieldLabel} must be ${maxLength} characters or less.` };
+  }
+
+  return { ok: true, value: normalized };
+}
+
+export function optionalInteger(
+  value: unknown,
+  fieldLabel: string,
+  options?: { min?: number; max?: number }
+): { ok: true; value: number | null } | { ok: false; error: string } {
+  if (value === undefined || value === null || value === "") {
+    return { ok: true, value: null };
+  }
+
+  if (typeof value !== "number" || !Number.isInteger(value)) {
+    return { ok: false, error: `${fieldLabel} must be a whole number.` };
+  }
+
+  const min = options?.min;
+  if (typeof min === "number" && value < min) {
+    return { ok: false, error: `${fieldLabel} must be ${min} or greater.` };
+  }
+
+  const max = options?.max;
+  if (typeof max === "number" && value > max) {
+    return { ok: false, error: `${fieldLabel} must be ${max} or less.` };
+  }
+
+  return { ok: true, value };
+}
+
 export function requireStringArray(
   value: unknown,
   fieldLabel: string,
@@ -80,7 +132,10 @@ export function requireStringArray(
   const maxItemLength = options?.maxItemLength;
 
   if (deduped.length < minItems) {
-    return { ok: false, error: `${fieldLabel} must include at least ${minItems} item${minItems === 1 ? "" : "s"}.` };
+    return {
+      ok: false,
+      error: `${fieldLabel} must include at least ${minItems} item${minItems === 1 ? "" : "s"}.`
+    };
   }
 
   if (typeof maxItems === "number" && deduped.length > maxItems) {

@@ -48,6 +48,30 @@ function toDatabaseApplicationStatus(status: Application["status"]) {
   return "SUBMITTED";
 }
 
+function toDatabaseProjectStatus(status: Project["status"]) {
+  if (status === "reviewing") {
+    return "REVIEWING";
+  }
+
+  if (status === "filled") {
+    return "FILLED";
+  }
+
+  return "OPEN";
+}
+
+function mapRole(role: string) {
+  if (role === "FACULTY") {
+    return "faculty" as const;
+  }
+
+  if (role === "ADMIN") {
+    return "admin" as const;
+  }
+
+  return "student" as const;
+}
+
 function roleLabel(role: string, majorOrTitle?: string | null): Project["ownerRole"] {
   if (majorOrTitle?.toLowerCase().includes("staff")) {
     return "Staff";
@@ -226,6 +250,159 @@ export async function getProjectById(id: string) {
   const project = await fetchProjectById(id);
 
   return project ? mapProject(project) : null;
+}
+
+export async function getUserProfile(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      skills: {
+        include: {
+          skill: true
+        },
+        orderBy: {
+          skill: {
+            name: "asc"
+          }
+        }
+      },
+      interests: {
+        include: {
+          interest: true
+        },
+        orderBy: {
+          interest: {
+            name: "asc"
+          }
+        }
+      }
+    }
+  });
+
+  if (!user) {
+    return null;
+  }
+
+  return {
+    id: user.id,
+    name: user.name,
+    role: mapRole(user.role),
+    department: user.department ?? "",
+    majorOrTitle: user.majorOrTitle ?? "",
+    graduationYear: user.graduationYear,
+    skills: user.skills.map((entry) => entry.skill.name),
+    interests: user.interests.map((entry) => entry.interest.name),
+    portfolioUrl: user.portfolioUrl,
+    githubUrl: user.githubUrl
+  };
+}
+
+export async function updateUserProfile(
+  userId: string,
+  input: {
+    name: string;
+    department: string;
+    majorOrTitle: string;
+    graduationYear: number | null;
+    portfolioUrl: string | null;
+    githubUrl: string | null;
+    skills: string[];
+    interests: string[];
+  }
+) {
+  const profile = await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: userId },
+      data: {
+        name: input.name,
+        department: input.department,
+        majorOrTitle: input.majorOrTitle,
+        graduationYear: input.graduationYear,
+        portfolioUrl: input.portfolioUrl,
+        githubUrl: input.githubUrl
+      }
+    });
+
+    await tx.userSkill.deleteMany({
+      where: { userId }
+    });
+    await tx.userInterest.deleteMany({
+      where: { userId }
+    });
+
+    for (const skillName of input.skills) {
+      const skill = await tx.skill.upsert({
+        where: { name: skillName },
+        update: {},
+        create: { name: skillName }
+      });
+
+      await tx.userSkill.create({
+        data: {
+          userId,
+          skillId: skill.id
+        }
+      });
+    }
+
+    for (const interestName of input.interests) {
+      const interest = await tx.interest.upsert({
+        where: { name: interestName },
+        update: {},
+        create: { name: interestName }
+      });
+
+      await tx.userInterest.create({
+        data: {
+          userId,
+          interestId: interest.id
+        }
+      });
+    }
+
+    return tx.user.findUnique({
+      where: { id: userId },
+      include: {
+        skills: {
+          include: {
+            skill: true
+          },
+          orderBy: {
+            skill: {
+              name: "asc"
+            }
+          }
+        },
+        interests: {
+          include: {
+            interest: true
+          },
+          orderBy: {
+            interest: {
+              name: "asc"
+            }
+          }
+        }
+      }
+    });
+  });
+
+  if (!profile) {
+    return null;
+  }
+
+  return {
+    id: profile.id,
+    name: profile.name,
+    role: mapRole(profile.role),
+    department: profile.department ?? "",
+    majorOrTitle: profile.majorOrTitle ?? "",
+    graduationYear: profile.graduationYear,
+    skills: profile.skills.map((entry) => entry.skill.name),
+    interests: profile.interests.map((entry) => entry.interest.name),
+    portfolioUrl: profile.portfolioUrl,
+    githubUrl: profile.githubUrl
+  };
 }
 
 export async function getOwnedProjects(userId: string) {
@@ -467,4 +644,33 @@ export async function updateOwnedProjectApplicationStatus(
     status: mapApplicationStatus(updatedApplication.status),
     submittedAt: updatedApplication.createdAt.toISOString().slice(0, 10)
   };
+}
+
+export async function updateOwnedProjectStatus(
+  projectId: string,
+  status: Project["status"],
+  userId: string
+) {
+  const existing = await prisma.project.findFirst({
+    where: {
+      id: projectId,
+      ownerId: userId
+    }
+  });
+
+  if (!existing) {
+    return null;
+  }
+
+  await prisma.project.update({
+    where: {
+      id: projectId
+    },
+    data: {
+      status: toDatabaseProjectStatus(status)
+    }
+  });
+
+  const updated = await fetchProjectById(projectId);
+  return updated ? mapProject(updated) : null;
 }

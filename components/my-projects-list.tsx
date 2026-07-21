@@ -7,6 +7,35 @@ import type { Application, OwnedProjectApplication, Project } from "@/lib/types"
 import { statusLabel } from "@/lib/utils";
 
 const applicationStatuses: Application["status"][] = ["submitted", "interview", "accepted", "declined"];
+const projectStatuses: Project["status"][] = ["open", "reviewing", "filled"];
+
+function projectStatusLabel(status: Project["status"]) {
+  if (status === "reviewing") {
+    return "Reviewing";
+  }
+
+  if (status === "filled") {
+    return "Filled";
+  }
+
+  return "Open";
+}
+
+function projectStatusStyles(status: Project["status"]) {
+  if (status === "reviewing") {
+    return "bg-gold/20 text-ink";
+  }
+
+  if (status === "filled") {
+    return "bg-ink/10 text-ink";
+  }
+
+  return "bg-moss/10 text-moss";
+}
+
+function isProjectStatus(value: string): value is Project["status"] {
+  return projectStatuses.includes(value as Project["status"]);
+}
 
 export function MyProjectsList() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -99,6 +128,38 @@ export function MyProjectsList() {
     }
   }
 
+  async function updateProjectStatus(projectId: string, status: Project["status"]) {
+    const previousProjects = projects;
+
+    setProjects((currentProjects) =>
+      currentProjects.map((project) => (project.id === projectId ? { ...project, status } : project))
+    );
+
+    try {
+      const response = await fetch(`/api/projects/${projectId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ status })
+      });
+
+      if (!response.ok) {
+        throw new Error("Project status could not be updated.");
+      }
+
+      const data = (await response.json()) as {
+        project: Project;
+      };
+
+      setProjects((currentProjects) =>
+        currentProjects.map((project) => (project.id === projectId ? data.project : project))
+      );
+    } catch {
+      setProjects(previousProjects);
+    }
+  }
+
   if (isLoadingProjects) {
     return (
       <section className="rounded-lg border border-ink/10 bg-white p-8 text-center shadow-soft">
@@ -144,10 +205,33 @@ export function MyProjectsList() {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <div className="mb-3 flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-moss/10 px-3 py-1 text-xs font-semibold text-moss">Open</span>
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ${projectStatusStyles(project.status)}`}
+                >
+                  {projectStatusLabel(project.status)}
+                </span>
                 <span className="rounded-full bg-blue/10 px-3 py-1 text-xs font-semibold text-blue">
                   {project.category}
                 </span>
+                <label className="flex items-center gap-2 rounded-md border border-ink/15 bg-white px-2 py-1">
+                  <span className="sr-only">Project status</span>
+                  <select
+                    value={project.status}
+                    onChange={(event) => {
+                      if (!isProjectStatus(event.target.value)) {
+                        return;
+                      }
+                      updateProjectStatus(project.id, event.target.value);
+                    }}
+                    className="focus-ring bg-transparent text-xs font-semibold text-ink outline-none"
+                  >
+                    {projectStatuses.map((status) => (
+                      <option key={status} value={status}>
+                        {projectStatusLabel(status)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
               </div>
               <h2 className="text-xl font-semibold text-ink">{project.title}</h2>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-ink/70">{project.description}</p>
