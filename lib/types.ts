@@ -4,13 +4,13 @@ export type UserProfile = {
   id: string;
   name: string;
   role: Role;
-  department: string;
-  majorOrTitle: string;
-  graduationYear?: number;
+  department?: string;
+  majorOrTitle?: string;
+  graduationYear?: number | null;
   skills: string[];
   interests: string[];
-  portfolioUrl?: string;
-  githubUrl?: string;
+  portfolioUrl?: string | null;
+  githubUrl?: string | null;
 };
 
 export type ProjectStatus = "open" | "reviewing" | "filled";

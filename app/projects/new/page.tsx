@@ -1,8 +1,16 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ArrowLeft, Lightbulb, ShieldCheck } from "lucide-react";
 import { ProjectForm } from "@/components/project-form";
+import { auth } from "@/auth";
 
-export default function NewProjectPage() {
+export default async function NewProjectPage() {
+  const session = await auth();
+
+  if (!session?.user?.email) {
+    redirect("/api/auth/signin?callbackUrl=%2Fprojects%2Fnew");
+  }
+
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
       <Link
@@ -39,7 +47,7 @@ export default function NewProjectPage() {
               MVP note
             </h2>
             <p className="mt-3 text-sm leading-6 text-ink/70">
-              This form validates and submits a draft. Database persistence comes in the next backend milestone.
+              This form writes directly to the database and requires an authenticated session.
             </p>
           </section>
         </aside>

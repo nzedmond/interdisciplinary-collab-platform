@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, BriefcaseBusiness, Clock, Sparkles } from "lucide-react";
 import { ApplicationForm } from "@/components/application-form";
+import { auth } from "@/auth";
 import { getProjectById } from "@/lib/projects";
 
 type ApplyPageProps = {
@@ -12,6 +13,12 @@ type ApplyPageProps = {
 
 export default async function ApplyPage({ params }: ApplyPageProps) {
   const { id } = await params;
+  const session = await auth();
+
+  if (!session?.user?.email) {
+    redirect(`/api/auth/signin?callbackUrl=${encodeURIComponent(`/projects/${id}/apply`)}`);
+  }
+
   const project = await getProjectById(id);
 
   if (!project) {

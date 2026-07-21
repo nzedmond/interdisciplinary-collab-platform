@@ -15,7 +15,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { ProjectCard } from "@/components/project-card";
 import { categories, currentUser, departments } from "@/lib/data";
-import type { Application, Project } from "@/lib/types";
+import type { Application, Project, UserProfile } from "@/lib/types";
 import { useSavedProjects } from "@/lib/use-saved-projects";
 import { statusLabel } from "@/lib/utils";
 
@@ -27,6 +27,7 @@ export function DashboardShell() {
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
   const [projectError, setProjectError] = useState<string | null>(null);
   const [applications, setApplications] = useState<Application[]>([]);
+  const [profile, setProfile] = useState<UserProfile>(currentUser);
   const { savedProjectIds, toggleSavedProject } = useSavedProjects();
 
   useEffect(() => {
@@ -61,6 +62,31 @@ export function DashboardShell() {
     }
 
     loadProjects();
+
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadProfile() {
+      try {
+        const response = await fetch("/api/profile", {
+          signal: controller.signal
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const data = (await response.json()) as { profile: UserProfile };
+        setProfile(data.profile);
+      } catch {
+        setProfile(currentUser);
+      }
+    }
+
+    loadProfile();
 
     return () => controller.abort();
   }, []);
@@ -181,10 +207,13 @@ export function DashboardShell() {
                 <BriefcaseBusiness className="h-4 w-4" />
                 My projects
               </Link>
-              <button className="focus-ring inline-flex items-center gap-2 rounded-md border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-moss hover:text-moss">
+              <Link
+                href="/profile"
+                className="focus-ring inline-flex items-center gap-2 rounded-md border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-moss hover:text-moss"
+              >
                 <UserRound className="h-4 w-4" />
                 Profile
-              </button>
+              </Link>
             </div>
           </div>
 
@@ -282,10 +311,10 @@ export function DashboardShell() {
 
           <aside className="space-y-6">
             <section className="rounded-lg border border-ink/10 bg-white/90 p-5 shadow-soft">
-              <h2 className="text-lg font-semibold text-ink">{currentUser.name}</h2>
-              <p className="mt-1 text-sm text-ink/65">{currentUser.majorOrTitle}</p>
+              <h2 className="text-lg font-semibold text-ink">{profile.name}</h2>
+              <p className="mt-1 text-sm text-ink/65">{profile.majorOrTitle || "Add your title in profile"}</p>
               <div className="mt-4 flex flex-wrap gap-2">
-                {currentUser.skills.slice(0, 5).map((skill) => (
+                {profile.skills.slice(0, 5).map((skill) => (
                   <span key={skill} className="rounded-full bg-moss/10 px-3 py-1 text-xs font-semibold text-moss">
                     {skill}
                   </span>
@@ -311,7 +340,7 @@ export function DashboardShell() {
               <h2 className="text-lg font-semibold text-ink">MVP coverage</h2>
               <div className="mt-4 space-y-3 text-sm text-ink/70">
                 <p>Project browsing, search, filters, match explanations, saved/apply actions, profile snapshot, and application status.</p>
-                <p>Next step is wiring these flows to Auth.js, Prisma, PostgreSQL, and embeddings.</p>
+                <p>Auth.js session checks now protect posting, saving, applying, and owner review actions.</p>
               </div>
             </section>
           </aside>
