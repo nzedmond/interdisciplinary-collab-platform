@@ -2,8 +2,6 @@ import { prisma } from "@/lib/prisma";
 import { currentUser } from "@/lib/data";
 import type { Application, OwnedProjectApplication, Project } from "@/lib/types";
 
-const demoUserEmail = "maya.johnson@example.edu";
-
 type ProjectWithRelations = Awaited<ReturnType<typeof fetchProjectById>>;
 
 function mapProjectStatus(status: string): Project["status"] {
@@ -138,27 +136,27 @@ async function fetchProjectById(id: string) {
   });
 }
 
-export async function ensureCurrentUser() {
-  return prisma.user.upsert({
-    where: { email: demoUserEmail },
-    update: {
-      name: currentUser.name,
-      department: currentUser.department,
-      majorOrTitle: currentUser.majorOrTitle,
-      graduationYear: currentUser.graduationYear,
-      portfolioUrl: currentUser.portfolioUrl,
-      githubUrl: currentUser.githubUrl
-    },
-    create: {
-      id: currentUser.id,
-      email: demoUserEmail,
-      name: currentUser.name,
-      role: "STUDENT",
-      department: currentUser.department,
-      majorOrTitle: currentUser.majorOrTitle,
-      graduationYear: currentUser.graduationYear,
-      portfolioUrl: currentUser.portfolioUrl,
-      githubUrl: currentUser.githubUrl
+export async function getProjectAuthorizationContext(projectId: string) {
+  return prisma.project.findUnique({
+    where: { id: projectId },
+    select: {
+      id: true,
+      ownerId: true,
+      status: true
+    }
+  });
+}
+
+export async function getApplicationAuthorizationContext(applicationId: string) {
+  return prisma.application.findUnique({
+    where: { id: applicationId },
+    select: {
+      id: true,
+      project: {
+        select: {
+          ownerId: true
+        }
+      }
     }
   });
 }
@@ -230,12 +228,10 @@ export async function getProjectById(id: string) {
   return project ? mapProject(project) : null;
 }
 
-export async function getOwnedProjects() {
-  const user = await ensureCurrentUser();
-
+export async function getOwnedProjects(userId: string) {
   const projects = await prisma.project.findMany({
     where: {
-      ownerId: user.id
+      ownerId: userId
     },
     include: {
       owner: true,
@@ -273,14 +269,12 @@ export async function createProject(input: {
   commitment: string;
   duration: string;
   goals: string[];
-}) {
-  const user = await ensureCurrentUser();
-
+}, userId: string) {
   const project = await prisma.project.create({
     data: {
       title: input.title,
       description: input.description,
-      ownerId: user.id,
+      ownerId: userId,
       category: input.category,
       departments: input.departments,
       commitment: input.commitment,
@@ -301,12 +295,10 @@ export async function createProject(input: {
   return mapProject(createdProject);
 }
 
-export async function getSavedProjectIds() {
-  const user = await ensureCurrentUser();
-
+export async function getSavedProjectIds(userId: string) {
   const savedProjects = await prisma.savedProject.findMany({
     where: {
-      userId: user.id
+      userId
     },
     select: {
       projectId: true
@@ -316,8 +308,7 @@ export async function getSavedProjectIds() {
   return savedProjects.map((savedProject) => savedProject.projectId);
 }
 
-export async function setSavedProject(projectId: string, isSaved: boolean) {
-  const user = await ensureCurrentUser();
+export async function setSavedProject(projectId: string, isSaved: boolean, userId: string) {
   const project = await fetchProjectById(projectId);
 
   if (!project) {
@@ -328,34 +319,33 @@ export async function setSavedProject(projectId: string, isSaved: boolean) {
     await prisma.savedProject.upsert({
       where: {
         userId_projectId: {
-          userId: user.id,
+          userId,
           projectId
         }
       },
       update: {},
       create: {
-        userId: user.id,
+        userId,
         projectId
       }
     });
   } else {
     await prisma.savedProject.deleteMany({
       where: {
-        userId: user.id,
+        userId,
         projectId
       }
     });
   }
 
-  return getSavedProjectIds();
+  return getSavedProjectIds(userId);
 }
 
 export async function createApplication(input: {
   projectId: string;
   message: string;
   availability: string;
-}) {
-  const user = await ensureCurrentUser();
+}, userId: string) {
   const project = await fetchProjectById(input.projectId);
 
   if (!project) {
@@ -368,7 +358,7 @@ export async function createApplication(input: {
     where: {
       projectId_applicantId: {
         projectId: input.projectId,
-        applicantId: user.id
+        applicantId: userId
       }
     },
     update: {
@@ -377,18 +367,16 @@ export async function createApplication(input: {
     },
     create: {
       projectId: input.projectId,
-      applicantId: user.id,
+      applicantId: userId,
       message: messageWithAvailability
     }
   });
 }
 
-export async function getApplicationsForCurrentUser() {
-  const user = await ensureCurrentUser();
-
+export async function getApplicationsForCurrentUser(userId: string) {
   const applications = await prisma.application.findMany({
     where: {
-      applicantId: user.id
+      applicantId: userId
     },
     include: {
       project: true,
@@ -408,13 +396,11 @@ export async function getApplicationsForCurrentUser() {
   }));
 }
 
-export async function getApplicationsForOwnedProjects(): Promise<OwnedProjectApplication[]> {
-  const user = await ensureCurrentUser();
-
+export async function getApplicationsForOwnedProjects(userId: string): Promise<OwnedProjectApplication[]> {
   const applications = await prisma.application.findMany({
     where: {
       project: {
-        ownerId: user.id
+        ownerId: userId
       }
     },
     include: {
@@ -441,14 +427,14 @@ export async function getApplicationsForOwnedProjects(): Promise<OwnedProjectApp
 
 export async function updateOwnedProjectApplicationStatus(
   applicationId: string,
-  status: Application["status"]
+  status: Application["status"],
+  userId: string
 ) {
-  const user = await ensureCurrentUser();
   const application = await prisma.application.findFirst({
     where: {
       id: applicationId,
       project: {
-        ownerId: user.id
+        ownerId: userId
       }
     }
   });

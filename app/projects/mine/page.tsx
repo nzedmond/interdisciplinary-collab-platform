@@ -1,8 +1,16 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ArrowLeft, Plus } from "lucide-react";
 import { MyProjectsList } from "@/components/my-projects-list";
+import { auth } from "@/auth";
 
-export default function MyProjectsPage() {
+export default async function MyProjectsPage() {
+  const session = await auth();
+
+  if (!session?.user?.email) {
+    redirect("/api/auth/signin?callbackUrl=%2Fprojects%2Fmine");
+  }
+
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
       <div className="flex flex-wrap items-center justify-between gap-3">

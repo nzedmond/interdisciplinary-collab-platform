@@ -181,10 +181,13 @@ export function DashboardShell() {
                 <BriefcaseBusiness className="h-4 w-4" />
                 My projects
               </Link>
-              <button className="focus-ring inline-flex items-center gap-2 rounded-md border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-moss hover:text-moss">
+              <Link
+                href="/api/auth/signin"
+                className="focus-ring inline-flex items-center gap-2 rounded-md border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-moss hover:text-moss"
+              >
                 <UserRound className="h-4 w-4" />
-                Profile
-              </button>
+                Sign in
+              </Link>
             </div>
           </div>
 
@@ -311,7 +314,7 @@ export function DashboardShell() {
               <h2 className="text-lg font-semibold text-ink">MVP coverage</h2>
               <div className="mt-4 space-y-3 text-sm text-ink/70">
                 <p>Project browsing, search, filters, match explanations, saved/apply actions, profile snapshot, and application status.</p>
-                <p>Next step is wiring these flows to Auth.js, Prisma, PostgreSQL, and embeddings.</p>
+                <p>Auth.js session checks now protect posting, saving, applying, and owner review actions.</p>
               </div>
             </section>
           </aside>

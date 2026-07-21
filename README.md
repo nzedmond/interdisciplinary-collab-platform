@@ -46,6 +46,13 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+## Authentication
+
+This app now uses Auth.js session-based protection for project posting, saved projects, applications, and owner-review endpoints.
+
+- Sign in at [http://localhost:3000/api/auth/signin](http://localhost:3000/api/auth/signin)
+- Use a `.edu` email address for the credentials sign-in flow
+
 ## Database Setup
 
 Set `DATABASE_URL` in `.env`, then run:

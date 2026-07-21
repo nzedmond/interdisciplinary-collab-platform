@@ -1,26 +1,46 @@
 import { NextResponse } from "next/server";
 import { getSavedProjectIds, setSavedProject } from "@/lib/project-repository";
+import { errorResponse, parseJsonBody, requireBoolean, requireTrimmedString } from "@/lib/api";
+import { getSessionUserId } from "@/lib/session-user";
 
 export async function GET() {
-  const savedProjectIds = await getSavedProjectIds();
+  const userId = await getSessionUserId();
+
+  if (!userId) {
+    return errorResponse(401, "Please sign in to manage saved projects.");
+  }
+
+  const savedProjectIds = await getSavedProjectIds(userId);
 
   return NextResponse.json({ savedProjectIds });
 }
 
 export async function PUT(request: Request) {
-  const body = (await request.json()) as {
-    projectId?: string;
-    isSaved?: boolean;
-  };
+  const userId = await getSessionUserId();
 
-  if (!body.projectId) {
-    return NextResponse.json({ error: "Project ID is required." }, { status: 400 });
+  if (!userId) {
+    return errorResponse(401, "Please sign in to save projects.");
   }
 
-  const savedProjectIds = await setSavedProject(body.projectId, Boolean(body.isSaved));
+  const parsedBody = await parseJsonBody<{ projectId?: unknown; isSaved?: unknown }>(request);
+  if (!parsedBody.ok) {
+    return parsedBody.response;
+  }
+
+  const projectId = requireTrimmedString(parsedBody.data.projectId, "Project ID", { maxLength: 80 });
+  if (!projectId.ok) {
+    return errorResponse(400, projectId.error);
+  }
+
+  const isSaved = requireBoolean(parsedBody.data.isSaved, "isSaved");
+  if (!isSaved.ok) {
+    return errorResponse(400, isSaved.error);
+  }
+
+  const savedProjectIds = await setSavedProject(projectId.value, isSaved.value, userId);
 
   if (!savedProjectIds) {
-    return NextResponse.json({ error: "Project not found." }, { status: 404 });
+    return errorResponse(404, "Project not found.");
   }
 
   return NextResponse.json({ savedProjectIds });
