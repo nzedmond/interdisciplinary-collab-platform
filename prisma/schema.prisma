@@ -148,3 +148,13 @@ model ProjectVector {
   updatedAt DateTime @updatedAt
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
+
+// Cache of sentence embeddings, keyed by a hash of (model + text), so any text
+// (a project, a profile, a single skill) is embedded once and reused until it changes.
+// Vectors are stored as JSON number arrays; similarity is computed in Node.
+model TextEmbedding {
+  hash      String   @id
+  model     String
+  embedding Json
+  createdAt DateTime @default(now())
+}

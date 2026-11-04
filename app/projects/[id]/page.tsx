@@ -113,6 +113,17 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
             <Sparkles className="mt-1 h-4 w-4 shrink-0 text-gold" />
             {project.recommendationReason}
           </p>
+          {project.matchMethod === "hybrid" ? (
+            <p className="mt-2 pl-6 text-xs text-ink/60">
+              Match {project.matchScore} = 70% meaning similarity ({project.semanticScore}) + 30% exact skill overlap (
+              {project.keywordScore}). Meaning similarity compares your profile with this project using a local
+              open-source language model.
+            </p>
+          ) : (
+            <p className="mt-2 pl-6 text-xs text-ink/60">
+              Match {project.matchScore} is based on exact skill overlap only.
+            </p>
+          )}
         </div>
 
         <div className="mt-6 flex flex-wrap gap-3">

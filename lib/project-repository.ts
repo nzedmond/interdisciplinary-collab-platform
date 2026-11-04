@@ -1,5 +1,7 @@
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
+import { embedTexts } from "@/lib/embeddings";
+import { cosineSimilarity, profileText, projectText, scoreMatch, type MatchableProfile } from "@/lib/matching";
 import { getSessionUserId } from "@/lib/session-user";
 import type { Prisma } from "@prisma/client";
 import type { Application, OwnedProjectApplication, Project, UserProfile } from "@/lib/types";
@@ -86,55 +88,93 @@ function roleLabel(role: string, majorOrTitle?: string | null): Project["ownerRo
   return "Student";
 }
 
-// Match scores are personal: they compare each project with the signed-in viewer's
-// skills. Loaded once per request; signed-out viewers get no skill matches.
-const getViewerSkills = cache(async (): Promise<string[]> => {
+// Match scores are personal: each project is compared with the signed-in viewer's
+// profile. Loaded once per request; null when nobody is signed in.
+const getViewerProfile = cache(async (): Promise<MatchableProfile | null> => {
   const userId = await getSessionUserId();
 
   if (!userId) {
-    return [];
+    return null;
   }
 
-  const userSkills = await prisma.userSkill.findMany({
-    where: { userId },
-    select: { skill: { select: { name: true } } }
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      majorOrTitle: true,
+      department: true,
+      bio: true,
+      experience: true,
+      coursework: true,
+      skills: { select: { skill: { select: { name: true } } } },
+      interests: { select: { interest: { select: { name: true } } } }
+    }
   });
 
-  return userSkills.map(({ skill }) => skill.name);
+  return user
+    ? {
+        ...user,
+        skills: user.skills.map(({ skill }) => skill.name),
+        interests: user.interests.map(({ interest }) => interest.name)
+      }
+    : null;
 });
 
-function calculateMatchScore(
-  project: {
-    skills: { skill: { name: string }; required: boolean }[];
-  },
-  viewerSkills: string[]
-) {
-  const userSkills = new Set(viewerSkills.map((skill) => skill.toLowerCase()));
-  const projectSkills = project.skills.map(({ skill }) => skill.name.toLowerCase());
-  const overlap = projectSkills.filter((skill) => userSkills.has(skill)).length;
+const emptyProfile: MatchableProfile = { skills: [], interests: [] };
+let hasWarnedAboutEmbeddings = false;
 
-  return Math.min(98, 68 + overlap * 8);
-}
+type UnscoredProject = Omit<
+  Project,
+  "matchScore" | "recommendationReason" | "semanticScore" | "keywordScore" | "matchMethod"
+>;
 
-function recommendationReason(
-  project: {
-    skills: { skill: { name: string }; required: boolean }[];
-  },
-  viewerSkills: string[]
-) {
-  const userSkills = new Set(viewerSkills.map((skill) => skill.toLowerCase()));
-  const matches = project.skills
-    .map(({ skill }) => skill.name)
-    .filter((skill) => userSkills.has(skill.toLowerCase()));
+// Adds match scores and reasons. Uses the local embedding model when it's available,
+// and falls back to keyword (exact skill) matching if it can't load, so pages never break.
+async function withMatches(projects: UnscoredProject[]): Promise<Project[]> {
+  const profile = (await getViewerProfile()) ?? emptyProfile;
+  const viewerText = profileText(profile);
+  const tags = [
+    ...profile.skills.map((tag) => ({ tag, kind: "skill" as const })),
+    ...profile.interests.map((tag) => ({ tag, kind: "interest" as const }))
+  ];
+  let vectors: Map<string, number[]> | null = null;
 
-  if (matches.length > 0) {
-    return `Recommended because it matches ${matches.slice(0, 3).join(", ")}.`;
+  if (viewerText && projects.length > 0) {
+    try {
+      vectors = await embedTexts([viewerText, ...tags.map(({ tag }) => tag), ...projects.map(projectText)]);
+    } catch (error) {
+      if (!hasWarnedAboutEmbeddings) {
+        hasWarnedAboutEmbeddings = true;
+        console.warn("[matching] embedding model unavailable; using keyword matching instead.", error);
+      }
+    }
   }
 
-  return "Recommended as a new interdisciplinary opportunity. Matching will improve once embeddings are connected.";
+  const viewerVector = vectors?.get(viewerText);
+
+  return projects.map((project) => {
+    const projectVector = vectors?.get(projectText(project));
+    const canUseEmbeddings = Boolean(viewerVector && projectVector);
+    const match = scoreMatch({
+      project,
+      profile,
+      similarity: canUseEmbeddings ? cosineSimilarity(viewerVector!, projectVector!) : null,
+      tagSimilarities: canUseEmbeddings
+        ? tags.flatMap(({ tag, kind }) => {
+            const tagVector = vectors!.get(tag);
+            return tagVector ? [{ tag, kind, similarity: cosineSimilarity(tagVector, projectVector!) }] : [];
+          })
+        : []
+    });
+
+    return { ...project, ...match };
+  });
 }
 
-function mapProject(project: NonNullable<ProjectWithRelations>, viewerSkills: string[]): Project {
+async function withMatch(project: UnscoredProject) {
+  return (await withMatches([project]))[0];
+}
+
+function mapProject(project: NonNullable<ProjectWithRelations>): UnscoredProject {
   const requiredSkills = project.skills
     .filter((projectSkill) => projectSkill.required)
     .map((projectSkill) => projectSkill.skill.name);
@@ -157,8 +197,6 @@ function mapProject(project: NonNullable<ProjectWithRelations>, viewerSkills: st
     goals: project.goals,
     status: mapProjectStatus(project.status),
     applicants: project._count.applications,
-    matchScore: calculateMatchScore(project, viewerSkills),
-    recommendationReason: recommendationReason(project, viewerSkills),
     verified: Boolean(project.verifiedAt),
     archived: project.status === "ARCHIVED"
   };
@@ -275,14 +313,13 @@ export async function getProjects() {
     }
   });
 
-  const viewerSkills = await getViewerSkills();
-  return projects.map((project) => mapProject(project, viewerSkills));
+  return withMatches(projects.map(mapProject));
 }
 
 export async function getProjectById(id: string) {
   const project = await fetchProjectById(id);
 
-  return project ? mapProject(project, await getViewerSkills()) : null;
+  return project ? withMatch(mapProject(project)) : null;
 }
 
 type UserWithTags = Prisma.UserGetPayload<{
@@ -469,8 +506,7 @@ export async function getOwnedProjects(userId: string) {
     }
   });
 
-  const viewerSkills = await getViewerSkills();
-  return projects.map((project) => mapProject(project, viewerSkills));
+  return withMatches(projects.map(mapProject));
 }
 
 export async function createProject(input: {
@@ -506,7 +542,7 @@ export async function createProject(input: {
     throw new Error("Project could not be loaded after creation.");
   }
 
-  return mapProject(createdProject, await getViewerSkills());
+  return withMatch(mapProject(createdProject));
 }
 
 export async function getSavedProjectIds(userId: string) {
@@ -715,7 +751,7 @@ export async function updateOwnedProjectStatus(
   });
 
   const updated = await fetchProjectById(projectId);
-  return updated ? mapProject(updated, await getViewerSkills()) : null;
+  return updated ? withMatch(mapProject(updated)) : null;
 }
 
 // A profile is visible to its owner, to admins, and to anyone who owns a project

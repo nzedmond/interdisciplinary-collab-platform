@@ -37,6 +37,10 @@ export type Project = {
   applicants: number;
   matchScore: number;
   recommendationReason: string;
+  // Components of matchScore, kept for comparing semantic vs keyword matching.
+  semanticScore?: number | null;
+  keywordScore?: number;
+  matchMethod?: "hybrid" | "keyword";
   verified?: boolean;
   archived?: boolean;
 };

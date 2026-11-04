@@ -3,6 +3,7 @@
 import type { Route } from "next";
 import Link from "next/link";
 import {
+  ArrowDownWideNarrow,
   BriefcaseBusiness,
   Filter,
   LayoutDashboard,
@@ -41,6 +42,7 @@ export function DashboardShell({ profile }: DashboardShellProps) {
   const [query, setQuery] = useState("");
   const [department, setDepartment] = useState(departments[0]);
   const [category, setCategory] = useState(categories[0]);
+  const [sortOrder, setSortOrder] = useState<"match" | "newest">("match");
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
   const [projectError, setProjectError] = useState<string | null>(null);
   const [applications, setApplications] = useState<Application[]>([]);
@@ -111,7 +113,7 @@ export function DashboardShell({ profile }: DashboardShellProps) {
   const filteredProjects = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
-    return projects.filter((project) => {
+    const filtered = projects.filter((project) => {
       const matchesQuery =
         normalizedQuery.length === 0 ||
         [
@@ -132,13 +134,13 @@ export function DashboardShell({ profile }: DashboardShellProps) {
 
       return matchesQuery && matchesDepartment && matchesCategory;
     });
-  }, [category, department, projects, query]);
+
+    // The API returns newest first; "Best match" re-sorts by the personal match score.
+    return sortOrder === "match" ? [...filtered].sort((a, b) => b.matchScore - a.matchScore) : filtered;
+  }, [category, department, projects, query, sortOrder]);
 
   const openProjects = projects.filter((project) => project.status === "open").length;
-  const averageMatch =
-    projects.length > 0
-      ? Math.round(projects.reduce((sum, project) => sum + project.matchScore, 0) / projects.length)
-      : 0;
+  const topMatch = projects.reduce((best, project) => Math.max(best, project.matchScore), 0);
 
   return (
     <main className="mx-auto flex w-full max-w-7xl gap-6 px-4 py-4 sm:px-6 lg:px-8">
@@ -214,8 +216,8 @@ export function DashboardShell({ profile }: DashboardShellProps) {
 
           <div className="mt-6 grid gap-3 md:grid-cols-3">
             <div className="rounded-lg border border-ink/10 bg-paper p-4">
-              <p className="text-xs font-semibold uppercase text-ink/50">Recommended match</p>
-              <p className="mt-1 text-2xl font-bold text-ink">{averageMatch}%</p>
+              <p className="text-xs font-semibold uppercase text-ink/50">Top match</p>
+              <p className="mt-1 text-2xl font-bold text-ink">{topMatch}%</p>
             </div>
             <div className="rounded-lg border border-ink/10 bg-paper p-4">
               <p className="text-xs font-semibold uppercase text-ink/50">Open projects</p>
@@ -266,6 +268,18 @@ export function DashboardShell({ profile }: DashboardShellProps) {
                     {categories.map((item) => (
                       <option key={item}>{item}</option>
                     ))}
+                  </select>
+                </label>
+                <label className="flex min-w-40 items-center gap-2 rounded-md border border-ink/15 bg-white px-3 py-2">
+                  <ArrowDownWideNarrow className="h-4 w-4 text-ink/50" />
+                  <span className="sr-only">Sort projects</span>
+                  <select
+                    value={sortOrder}
+                    onChange={(event) => setSortOrder(event.target.value as "match" | "newest")}
+                    className="focus-ring w-full bg-transparent text-sm text-ink outline-none"
+                  >
+                    <option value="match">Best match</option>
+                    <option value="newest">Newest</option>
                   </select>
                 </label>
               </div>

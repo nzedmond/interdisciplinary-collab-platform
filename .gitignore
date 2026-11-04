@@ -8,3 +8,6 @@ coverage
 *.log
 .postgres-data
 *.tsbuildinfo
+
+# Local embedding model downloads
+.cache/

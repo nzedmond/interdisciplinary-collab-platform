@@ -73,6 +73,26 @@ This app now uses Auth.js session-based protection for project posting, saved pr
 - **Contact**: an Email button opens a pre-addressed message to the applicant.
 - Owners see "Manage applicants" instead of "Apply" on their own projects; applicants see their application status; closed projects show "Applications closed".
 
+## Semantic matching (local, open-source)
+
+Match scores compare each project with the signed-in user's profile using
+[`all-MiniLM-L6-v2`](https://huggingface.co/Xenova/all-MiniLM-L6-v2), a small open-source
+sentence-embedding model that runs inside Node via `@huggingface/transformers`. No API key or
+external service is used at runtime.
+
+- Run `npm run embeddings:warm` once after `npm install` to download the model (~23 MB) into
+  `.cache/models`. After that, matching works offline.
+- **Score** = 70% meaning similarity (profile text vs. project text) + 30% exact skill overlap.
+  Both parts are returned by the API (`semanticScore`, `keywordScore`, `matchMethod`) so semantic
+  and keyword matching can be compared.
+- **Explanations** name the user's exact matching skills plus the skills/interests closest in
+  meaning to the project (e.g. "relates to your interest in Community archives").
+- Embeddings are cached in the `TextEmbedding` table by a hash of the text, so each project,
+  profile, and skill is embedded once and re-embedded only when it changes.
+- If the model can't load, scoring falls back to keyword matching and logs a warning.
+- Vectors are stored as JSON and compared in Node, which is fast at campus scale. Moving them
+  to pgvector is the path if the dataset grows to many thousands of projects.
+
 ## Admin tools
 
 Sign in as `admin@example.edu` and open `/admin` (also linked from the dashboard). Non-admins get a 404 there and a 403 from the admin API.
@@ -118,5 +138,4 @@ If you do not already have a local PostgreSQL server running, use a hosted devel
 
 ## Suggested Next Milestones
 
-1. Enable pgvector and store project/user embeddings for semantic matching.
-2. Add analytics for recommendation quality and cross-department collaboration patterns.
+1. Add analytics for recommendation quality and cross-department collaboration patterns.
