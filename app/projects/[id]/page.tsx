@@ -12,7 +12,9 @@ import {
 } from "lucide-react";
 import { SaveProjectButton } from "@/components/save-project-button";
 import { getProjectById } from "@/lib/projects";
-import { cn } from "@/lib/utils";
+import { getProjectAuthorizationContext, getViewerApplication } from "@/lib/project-repository";
+import { getSessionUserId } from "@/lib/session-user";
+import { cn, statusLabel } from "@/lib/utils";
 
 type ProjectDetailPageProps = {
   params: Promise<{
@@ -28,11 +30,19 @@ const statusStyles = {
 
 export default async function ProjectDetailPage({ params }: ProjectDetailPageProps) {
   const { id } = await params;
-  const project = await getProjectById(id);
+  const [project, context, viewerId] = await Promise.all([
+    getProjectById(id),
+    getProjectAuthorizationContext(id),
+    getSessionUserId()
+  ]);
 
-  if (!project) {
+  if (!project || !context) {
     notFound();
   }
+
+  const isOwner = viewerId === context.ownerId;
+  const viewerApplication = viewerId && !isOwner ? await getViewerApplication(project.id, viewerId) : null;
+  const isAcceptingApplications = context.status === "OPEN";
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
@@ -91,14 +101,33 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
         </div>
 
         <div className="mt-6 flex flex-wrap gap-3">
-          <Link
-            href={`/projects/${project.id}/apply`}
-            className="focus-ring inline-flex items-center gap-2 rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white transition hover:bg-moss"
-          >
-            <Sparkles className="h-4 w-4" />
-            Apply
-          </Link>
-          <SaveProjectButton projectId={project.id} />
+          {isOwner ? (
+            <Link
+              href="/projects/mine"
+              className="focus-ring inline-flex items-center gap-2 rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white transition hover:bg-moss"
+            >
+              <Users className="h-4 w-4" />
+              Manage applicants ({project.applicants})
+            </Link>
+          ) : viewerApplication ? (
+            <span className="inline-flex items-center gap-2 rounded-md border border-moss/30 bg-moss/10 px-4 py-2 text-sm font-semibold text-moss">
+              <CheckCircle2 className="h-4 w-4" />
+              Applied {viewerApplication.submittedAt} · {statusLabel(viewerApplication.status)}
+            </span>
+          ) : isAcceptingApplications ? (
+            <Link
+              href={`/projects/${project.id}/apply`}
+              className="focus-ring inline-flex items-center gap-2 rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white transition hover:bg-moss"
+            >
+              <Sparkles className="h-4 w-4" />
+              Apply
+            </Link>
+          ) : (
+            <span className="inline-flex items-center gap-2 rounded-md border border-ink/15 bg-paper px-4 py-2 text-sm font-semibold text-ink/60">
+              Applications closed
+            </span>
+          )}
+          {isOwner ? null : <SaveProjectButton projectId={project.id} />}
         </div>
       </section>
 

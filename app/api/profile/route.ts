@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   errorResponse,
+  optionalHttpUrl,
   optionalInteger,
   optionalTrimmedString,
   parseJsonBody,
@@ -18,6 +19,10 @@ type UpdateProfileRequest = {
   graduationYear?: unknown;
   portfolioUrl?: unknown;
   githubUrl?: unknown;
+  resumeUrl?: unknown;
+  bio?: unknown;
+  coursework?: unknown;
+  experience?: unknown;
   skills?: unknown;
   interests?: unknown;
 };
@@ -90,18 +95,36 @@ export async function PATCH(request: Request) {
     return errorResponse(400, graduationYear.error);
   }
 
-  const portfolioUrl = optionalTrimmedString(parsedBody.data.portfolioUrl, "Portfolio URL", {
+  const portfolioUrl = optionalHttpUrl(parsedBody.data.portfolioUrl, "Portfolio URL", {
     maxLength: 300
   });
   if (!portfolioUrl.ok) {
     return errorResponse(400, portfolioUrl.error);
   }
 
-  const githubUrl = optionalTrimmedString(parsedBody.data.githubUrl, "GitHub URL", {
+  const githubUrl = optionalHttpUrl(parsedBody.data.githubUrl, "GitHub URL", {
     maxLength: 300
   });
   if (!githubUrl.ok) {
     return errorResponse(400, githubUrl.error);
+  }
+
+  const resumeUrl = optionalHttpUrl(parsedBody.data.resumeUrl, "Resume URL", {
+    maxLength: 300
+  });
+  if (!resumeUrl.ok) {
+    return errorResponse(400, resumeUrl.error);
+  }
+
+  const longText = {
+    bio: optionalTrimmedString(parsedBody.data.bio, "About you", { maxLength: 2000 }),
+    coursework: optionalTrimmedString(parsedBody.data.coursework, "Coursework", { maxLength: 2000 }),
+    experience: optionalTrimmedString(parsedBody.data.experience, "Project experience", { maxLength: 2000 })
+  };
+  for (const field of Object.values(longText)) {
+    if (!field.ok) {
+      return errorResponse(400, field.error);
+    }
   }
 
   const skills = requireStringArray(parsedBody.data.skills ?? [], "Skills", {
@@ -127,6 +150,10 @@ export async function PATCH(request: Request) {
     graduationYear: graduationYear.value,
     portfolioUrl: portfolioUrl.value,
     githubUrl: githubUrl.value,
+    resumeUrl: resumeUrl.value,
+    bio: longText.bio.ok ? longText.bio.value : null,
+    coursework: longText.coursework.ok ? longText.coursework.value : null,
+    experience: longText.experience.ok ? longText.experience.value : null,
     skills: skills.value,
     interests: interests.value
   });

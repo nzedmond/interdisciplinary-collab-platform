@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Save, UserRound } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { UserProfile } from "@/lib/types";
@@ -19,7 +21,10 @@ function textToList(value: string) {
     .filter(Boolean);
 }
 
+const inputClass = "focus-ring mt-2 w-full rounded-md border border-ink/15 bg-white px-3 py-2 text-sm text-ink";
+
 export function ProfileForm() {
+  const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [name, setName] = useState("");
   const [department, setDepartment] = useState("");
@@ -27,6 +32,10 @@ export function ProfileForm() {
   const [graduationYear, setGraduationYear] = useState("");
   const [portfolioUrl, setPortfolioUrl] = useState("");
   const [githubUrl, setGithubUrl] = useState("");
+  const [resumeUrl, setResumeUrl] = useState("");
+  const [bio, setBio] = useState("");
+  const [coursework, setCoursework] = useState("");
+  const [experience, setExperience] = useState("");
   const [skills, setSkills] = useState("");
   const [interests, setInterests] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -60,6 +69,10 @@ export function ProfileForm() {
         setGraduationYear(nextProfile.graduationYear ? String(nextProfile.graduationYear) : "");
         setPortfolioUrl(nextProfile.portfolioUrl ?? "");
         setGithubUrl(nextProfile.githubUrl ?? "");
+        setResumeUrl(nextProfile.resumeUrl ?? "");
+        setBio(nextProfile.bio ?? "");
+        setCoursework(nextProfile.coursework ?? "");
+        setExperience(nextProfile.experience ?? "");
         setSkills(listToText(nextProfile.skills));
         setInterests(listToText(nextProfile.interests));
       } catch (loadError) {
@@ -101,6 +114,10 @@ export function ProfileForm() {
         graduationYear: graduationYear ? Number(graduationYear) : null,
         portfolioUrl,
         githubUrl,
+        resumeUrl,
+        bio,
+        coursework,
+        experience,
         skills: textToList(skills),
         interests: textToList(interests)
       })
@@ -117,6 +134,9 @@ export function ProfileForm() {
     setProfile(data.profile);
     setSuccessMessage("Profile updated.");
     setIsSaving(false);
+    // Show the saved profile; refresh so server-rendered pages pick up the new data.
+    router.push("/profile");
+    router.refresh();
   }
 
   if (isLoading) {
@@ -197,6 +217,52 @@ export function ProfileForm() {
           />
         </label>
 
+        <label>
+          <span className="text-sm font-semibold text-ink">Resume URL</span>
+          <input
+            value={resumeUrl}
+            onChange={(event) => setResumeUrl(event.target.value)}
+            className={inputClass}
+            placeholder="Link to a shared PDF, e.g. Google Drive"
+          />
+        </label>
+
+        <label className="md:col-span-2">
+          <span className="text-sm font-semibold text-ink">About you</span>
+          <textarea
+            value={bio}
+            onChange={(event) => setBio(event.target.value)}
+            rows={3}
+            maxLength={2000}
+            className={inputClass}
+            placeholder="What do you care about, and what kind of collaboration are you looking for?"
+          />
+        </label>
+
+        <label className="md:col-span-2">
+          <span className="text-sm font-semibold text-ink">Project experience</span>
+          <textarea
+            value={experience}
+            onChange={(event) => setExperience(event.target.value)}
+            rows={4}
+            maxLength={2000}
+            className={inputClass}
+            placeholder="Research, creative, or technical projects you've worked on and what you did."
+          />
+        </label>
+
+        <label className="md:col-span-2">
+          <span className="text-sm font-semibold text-ink">Relevant coursework</span>
+          <textarea
+            value={coursework}
+            onChange={(event) => setCoursework(event.target.value)}
+            rows={3}
+            maxLength={2000}
+            className={inputClass}
+            placeholder="e.g. COSC 290 Data Structures, ENST 101 Intro to Environmental Studies"
+          />
+        </label>
+
         <label className="md:col-span-2">
           <span className="text-sm font-semibold text-ink">Skills (comma-separated)</span>
           <input
@@ -237,6 +303,12 @@ export function ProfileForm() {
         <Save className="h-4 w-4" />
         {isSaving ? "Saving" : "Save profile"}
       </button>
+      <Link
+        href="/profile"
+        className="focus-ring ml-3 mt-6 inline-flex items-center rounded-md border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-moss hover:text-moss"
+      >
+        Cancel
+      </Link>
 
       {profile ? (
         <p className="mt-4 flex items-center gap-2 text-xs text-ink/60">

@@ -2,8 +2,9 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, BriefcaseBusiness, Clock, Sparkles } from "lucide-react";
 import { ApplicationForm } from "@/components/application-form";
-import { auth } from "@/auth";
 import { getProjectById } from "@/lib/projects";
+import { getProjectAuthorizationContext, getViewerApplication } from "@/lib/project-repository";
+import { getSessionUserId } from "@/lib/session-user";
 
 type ApplyPageProps = {
   params: Promise<{
@@ -13,16 +14,25 @@ type ApplyPageProps = {
 
 export default async function ApplyPage({ params }: ApplyPageProps) {
   const { id } = await params;
-  const session = await auth();
+  const userId = await getSessionUserId();
 
-  if (!session?.user?.email) {
+  if (!userId) {
     redirect(`/login?callbackUrl=${encodeURIComponent(`/projects/${id}/apply`)}`);
   }
 
-  const project = await getProjectById(id);
+  const [project, context, existingApplication] = await Promise.all([
+    getProjectById(id),
+    getProjectAuthorizationContext(id),
+    getViewerApplication(id, userId)
+  ]);
 
-  if (!project) {
+  if (!project || !context) {
     notFound();
+  }
+
+  // The API rejects these too; send people back to the project page, which explains why.
+  if (context.ownerId === userId || context.status !== "OPEN" || existingApplication) {
+    redirect(`/projects/${id}`);
   }
 
   return (

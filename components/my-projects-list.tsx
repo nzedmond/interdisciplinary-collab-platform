@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { BriefcaseBusiness, Clock, Mail, Plus, UserRoundCheck } from "lucide-react";
+import { BriefcaseBusiness, Clock, Mail, MessageSquareText, Plus, UserRound, UserRoundCheck } from "lucide-react";
 import { useEffect, useState } from "react";
+import { ApplicantDecision } from "@/components/applicant-decision";
 import type { Application, OwnedProjectApplication, Project } from "@/lib/types";
-import { statusLabel } from "@/lib/utils";
 
-const applicationStatuses: Application["status"][] = ["submitted", "interview", "accepted", "declined"];
 const projectStatuses: Project["status"][] = ["open", "reviewing", "filled"];
 
 function projectStatusLabel(status: Project["status"]) {
@@ -35,6 +34,23 @@ function projectStatusStyles(status: Project["status"]) {
 
 function isProjectStatus(value: string): value is Project["status"] {
   return projectStatuses.includes(value as Project["status"]);
+}
+
+function ApplicantCounts({ applications }: { applications: OwnedProjectApplication[] }) {
+  if (applications.length === 0) {
+    return null;
+  }
+
+  const count = (status: Application["status"]) =>
+    applications.filter((application) => application.status === status).length;
+  const parts = [
+    `${applications.length} total`,
+    count("submitted") ? `${count("submitted")} new` : null,
+    count("interview") ? `${count("interview")} interviewing` : null,
+    count("accepted") ? `${count("accepted")} accepted` : null
+  ].filter(Boolean);
+
+  return <span className="text-xs font-normal text-ink/55">· {parts.join(" · ")}</span>;
 }
 
 export function MyProjectsList() {
@@ -92,40 +108,13 @@ export function MyProjectsList() {
     return () => controller.abort();
   }, []);
 
-  async function updateApplicationStatus(applicationId: string, status: Application["status"]) {
-    const previousApplications = applications;
-
+  // ApplicantDecision saves the change; keep this list's copy in sync for the counts.
+  function syncApplicationStatus(applicationId: string, status: Application["status"]) {
     setApplications((currentApplications) =>
       currentApplications.map((application) =>
         application.id === applicationId ? { ...application, status } : application
       )
     );
-
-    try {
-      const response = await fetch(`/api/applications/${applicationId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ status })
-      });
-
-      if (!response.ok) {
-        throw new Error("Application status could not be updated.");
-      }
-
-      const data = (await response.json()) as {
-        application: OwnedProjectApplication;
-      };
-
-      setApplications((currentApplications) =>
-        currentApplications.map((application) =>
-          application.id === applicationId ? data.application : application
-        )
-      );
-    } catch {
-      setApplications(previousApplications);
-    }
   }
 
   async function updateProjectStatus(projectId: string, status: Project["status"]) {
@@ -261,6 +250,7 @@ export function MyProjectsList() {
             <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
               <UserRoundCheck className="h-4 w-4 text-moss" />
               Applicants
+              <ApplicantCounts applications={applications.filter((application) => application.projectId === project.id)} />
             </h3>
             <div className="mt-3 space-y-3">
               {applications.filter((application) => application.projectId === project.id).length > 0 ? (
@@ -270,40 +260,50 @@ export function MyProjectsList() {
                     <div key={application.id} className="rounded-lg border border-ink/10 bg-paper p-4">
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                          <p className="text-sm font-semibold text-ink">{application.applicantName}</p>
+                          <Link
+                            href={`/people/${application.applicantId}`}
+                            className="text-sm font-semibold text-ink hover:text-moss hover:underline"
+                          >
+                            {application.applicantName}
+                          </Link>
                           <p className="mt-1 text-xs text-ink/60">
-                            {[application.applicantMajorOrTitle, application.applicantDepartment]
+                            {[application.applicantMajorOrTitle, application.applicantDepartment, `Applied ${application.submittedAt}`]
                               .filter(Boolean)
                               .join(" · ")}
                           </p>
                         </div>
-                        <label className="flex items-center gap-2 rounded-md border border-ink/15 bg-white px-3 py-2">
-                          <span className="sr-only">Application status</span>
-                          <select
-                            value={application.status}
-                            onChange={(event) =>
-                              updateApplicationStatus(
-                                application.id,
-                                event.target.value as Application["status"]
-                              )
-                            }
-                            className="focus-ring bg-transparent text-sm font-semibold text-ink outline-none"
-                          >
-                            {applicationStatuses.map((status) => (
-                              <option key={status} value={status}>
-                                {statusLabel(status)}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
+                        <ApplicantDecision
+                          applicationId={application.id}
+                          initialStatus={application.status}
+                          onStatusChange={(status) => syncApplicationStatus(application.id, status)}
+                        />
                       </div>
 
                       {application.message ? (
-                        <p className="mt-3 flex gap-2 text-sm leading-6 text-ink/70">
-                          <Mail className="mt-1 h-4 w-4 shrink-0 text-coral" />
+                        <p className="mt-3 flex gap-2 whitespace-pre-line text-sm leading-6 text-ink/70">
+                          <MessageSquareText className="mt-1 h-4 w-4 shrink-0 text-coral" />
                           {application.message}
                         </p>
                       ) : null}
+
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Link
+                          href={`/people/${application.applicantId}`}
+                          className="focus-ring inline-flex items-center gap-1 rounded-md border border-ink/15 bg-white px-3 py-1 text-xs font-semibold text-ink transition hover:border-moss hover:text-moss"
+                        >
+                          <UserRound className="h-3 w-3" />
+                          View profile
+                        </Link>
+                        <a
+                          href={`mailto:${application.applicantEmail}?subject=${encodeURIComponent(
+                            `Your application to "${application.projectTitle}"`
+                          )}`}
+                          className="focus-ring inline-flex items-center gap-1 rounded-md border border-ink/15 bg-white px-3 py-1 text-xs font-semibold text-ink transition hover:border-moss hover:text-moss"
+                        >
+                          <Mail className="h-3 w-3" />
+                          Email
+                        </a>
+                      </div>
                     </div>
                   ))
               ) : (

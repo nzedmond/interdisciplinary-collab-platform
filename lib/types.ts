@@ -11,6 +11,11 @@ export type UserProfile = {
   interests: string[];
   portfolioUrl?: string | null;
   githubUrl?: string | null;
+  email?: string;
+  bio?: string | null;
+  coursework?: string | null;
+  experience?: string | null;
+  resumeUrl?: string | null;
 };
 
 export type ProjectStatus = "open" | "reviewing" | "filled";
@@ -44,6 +49,8 @@ export type Application = {
 
 export type OwnedProjectApplication = Application & {
   projectId: string;
+  applicantId: string;
+  applicantEmail: string;
   applicantDepartment?: string;
   applicantMajorOrTitle?: string;
   message?: string;

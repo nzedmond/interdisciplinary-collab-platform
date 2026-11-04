@@ -1,7 +1,8 @@
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { getSessionUserId } from "@/lib/session-user";
-import type { Application, OwnedProjectApplication, Project } from "@/lib/types";
+import type { Prisma } from "@prisma/client";
+import type { Application, OwnedProjectApplication, Project, UserProfile } from "@/lib/types";
 
 type ProjectWithRelations = Awaited<ReturnType<typeof fetchProjectById>>;
 
@@ -278,6 +279,30 @@ export async function getProjectById(id: string) {
   return project ? mapProject(project, await getViewerSkills()) : null;
 }
 
+type UserWithTags = Prisma.UserGetPayload<{
+  include: { skills: { include: { skill: true } }; interests: { include: { interest: true } } };
+}>;
+
+function toUserProfile(user: UserWithTags): UserProfile {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: mapRole(user.role),
+    department: user.department ?? "",
+    majorOrTitle: user.majorOrTitle ?? "",
+    graduationYear: user.graduationYear,
+    skills: user.skills.map((entry) => entry.skill.name),
+    interests: user.interests.map((entry) => entry.interest.name),
+    portfolioUrl: user.portfolioUrl,
+    githubUrl: user.githubUrl,
+    resumeUrl: user.resumeUrl,
+    bio: user.bio,
+    coursework: user.coursework,
+    experience: user.experience
+  };
+}
+
 export async function getUserProfile(userId: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -305,22 +330,7 @@ export async function getUserProfile(userId: string) {
     }
   });
 
-  if (!user) {
-    return null;
-  }
-
-  return {
-    id: user.id,
-    name: user.name,
-    role: mapRole(user.role),
-    department: user.department ?? "",
-    majorOrTitle: user.majorOrTitle ?? "",
-    graduationYear: user.graduationYear,
-    skills: user.skills.map((entry) => entry.skill.name),
-    interests: user.interests.map((entry) => entry.interest.name),
-    portfolioUrl: user.portfolioUrl,
-    githubUrl: user.githubUrl
-  };
+  return user ? toUserProfile(user) : null;
 }
 
 export async function updateUserProfile(
@@ -332,6 +342,10 @@ export async function updateUserProfile(
     graduationYear: number | null;
     portfolioUrl: string | null;
     githubUrl: string | null;
+    resumeUrl?: string | null;
+    bio?: string | null;
+    coursework?: string | null;
+    experience?: string | null;
     skills: string[];
     interests: string[];
   }
@@ -345,7 +359,12 @@ export async function updateUserProfile(
         majorOrTitle: input.majorOrTitle,
         graduationYear: input.graduationYear,
         portfolioUrl: input.portfolioUrl,
-        githubUrl: input.githubUrl
+        githubUrl: input.githubUrl,
+        // Optional so older clients that don't send these fields leave them unchanged.
+        resumeUrl: input.resumeUrl,
+        bio: input.bio,
+        coursework: input.coursework,
+        experience: input.experience
       }
     });
 
@@ -413,22 +432,7 @@ export async function updateUserProfile(
     });
   });
 
-  if (!profile) {
-    return null;
-  }
-
-  return {
-    id: profile.id,
-    name: profile.name,
-    role: mapRole(profile.role),
-    department: profile.department ?? "",
-    majorOrTitle: profile.majorOrTitle ?? "",
-    graduationYear: profile.graduationYear,
-    skills: profile.skills.map((entry) => entry.skill.name),
-    interests: profile.interests.map((entry) => entry.interest.name),
-    portfolioUrl: profile.portfolioUrl,
-    githubUrl: profile.githubUrl
-  };
+  return profile ? toUserProfile(profile) : null;
 }
 
 export async function getOwnedProjects(userId: string) {
@@ -620,7 +624,9 @@ export async function getApplicationsForOwnedProjects(userId: string): Promise<O
     id: application.id,
     projectId: application.projectId,
     projectTitle: application.project.title,
+    applicantId: application.applicantId,
     applicantName: application.applicant.name,
+    applicantEmail: application.applicant.email,
     applicantDepartment: application.applicant.department ?? undefined,
     applicantMajorOrTitle: application.applicant.majorOrTitle ?? undefined,
     message: application.message ?? undefined,
@@ -664,7 +670,9 @@ export async function updateOwnedProjectApplicationStatus(
     id: updatedApplication.id,
     projectId: updatedApplication.projectId,
     projectTitle: updatedApplication.project.title,
+    applicantId: updatedApplication.applicantId,
     applicantName: updatedApplication.applicant.name,
+    applicantEmail: updatedApplication.applicant.email,
     applicantDepartment: updatedApplication.applicant.department ?? undefined,
     applicantMajorOrTitle: updatedApplication.applicant.majorOrTitle ?? undefined,
     message: updatedApplication.message ?? undefined,
@@ -700,4 +708,55 @@ export async function updateOwnedProjectStatus(
 
   const updated = await fetchProjectById(projectId);
   return updated ? mapProject(updated, await getViewerSkills()) : null;
+}
+
+// A profile is visible to its owner, to admins, and to anyone who owns a project
+// the person has applied to (so owners can review applicants). Nobody else.
+export async function canViewProfile(viewerId: string, profileUserId: string) {
+  if (viewerId === profileUserId) {
+    return true;
+  }
+
+  const viewer = await prisma.user.findUnique({ where: { id: viewerId }, select: { role: true } });
+
+  if (viewer?.role === "ADMIN") {
+    return true;
+  }
+
+  const application = await prisma.application.findFirst({
+    where: { applicantId: profileUserId, project: { ownerId: viewerId } },
+    select: { id: true }
+  });
+
+  return Boolean(application);
+}
+
+// Applications a person has made to projects the viewer owns, newest first.
+export async function getApplicationsToOwnerFromApplicant(ownerId: string, applicantId: string) {
+  const applications = await prisma.application.findMany({
+    where: { applicantId, project: { ownerId } },
+    include: { project: { select: { id: true, title: true } } },
+    orderBy: { createdAt: "desc" }
+  });
+
+  return applications.map((application) => ({
+    id: application.id,
+    projectId: application.project.id,
+    projectTitle: application.project.title,
+    message: application.message ?? undefined,
+    status: mapApplicationStatus(application.status),
+    submittedAt: application.createdAt.toISOString().slice(0, 10)
+  }));
+}
+
+// The viewer's own application to a project, if any (for the project page).
+export async function getViewerApplication(projectId: string, userId: string) {
+  const application = await prisma.application.findUnique({
+    where: { projectId_applicantId: { projectId, applicantId: userId } },
+    select: { status: true, createdAt: true }
+  });
+
+  return application
+    ? { status: mapApplicationStatus(application.status), submittedAt: application.createdAt.toISOString().slice(0, 10) }
+    : null;
 }

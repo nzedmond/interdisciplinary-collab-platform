@@ -119,4 +119,67 @@ describe("PATCH /api/profile", () => {
       })
     );
   });
+
+  function patchProfile(overrides) {
+    return PATCH(
+      new Request("http://localhost/api/profile", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          name: "Maya Johnson",
+          department: "Computer Science",
+          majorOrTitle: "Data Science major",
+          skills: ["Python"],
+          interests: [],
+          ...overrides
+        })
+      })
+    );
+  }
+
+  it.each([
+    ["portfolioUrl", "javascript:alert(1)"],
+    ["githubUrl", "data:text/html,hi"],
+    ["resumeUrl", "not a url"]
+  ])("rejects unsafe or invalid %s", async (field, value) => {
+    vi.mocked(getSessionUserId).mockResolvedValue("user-1");
+
+    const response = await patchProfile({ [field]: value });
+
+    expect(response.status).toBe(400);
+    expect(updateUserProfile).not.toHaveBeenCalled();
+  });
+
+  it("saves bio, coursework, experience, and normalized resume link", async () => {
+    vi.mocked(getSessionUserId).mockResolvedValue("user-1");
+    vi.mocked(updateUserProfile).mockResolvedValue({ id: "user-1", name: "Maya Johnson" });
+
+    const response = await patchProfile({
+      bio: "  Data storyteller.  ",
+      coursework: "COSC 290",
+      experience: "Oral-history map",
+      resumeUrl: "drive.google.com/maya-resume"
+    });
+
+    expect(response.status).toBe(200);
+    expect(updateUserProfile).toHaveBeenCalledWith(
+      "user-1",
+      expect.objectContaining({
+        bio: "Data storyteller.",
+        coursework: "COSC 290",
+        experience: "Oral-history map",
+        resumeUrl: "https://drive.google.com/maya-resume"
+      })
+    );
+  });
+
+  it("rejects an overly long bio", async () => {
+    vi.mocked(getSessionUserId).mockResolvedValue("user-1");
+
+    const response = await patchProfile({ bio: "x".repeat(2001) });
+
+    expect(response.status).toBe(400);
+  });
 });

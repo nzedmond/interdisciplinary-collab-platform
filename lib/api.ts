@@ -154,3 +154,32 @@ export function requireStringArray(
 
   return { ok: true, value: deduped };
 }
+
+// Accepts an empty value or a web address. Adds https:// when the scheme is missing
+// and rejects anything that isn't http(s) (e.g. javascript: links), since these
+// values are rendered as <a href> on profile pages.
+export function optionalHttpUrl(
+  value: unknown,
+  fieldLabel: string,
+  options?: { maxLength?: number }
+): { ok: true; value: string | null } | { ok: false; error: string } {
+  const text = optionalTrimmedString(value, fieldLabel, options);
+  if (!text.ok || text.value === null) {
+    return text;
+  }
+
+  const hasScheme = /^[a-z][a-z0-9+.-]*:/i.test(text.value);
+  if (hasScheme && !/^https?:\/\//i.test(text.value)) {
+    return { ok: false, error: `${fieldLabel} must be a web address starting with http:// or https://.` };
+  }
+
+  try {
+    const url = new URL(hasScheme ? text.value : `https://${text.value}`);
+    if (!url.hostname.includes(".")) {
+      throw new Error("Missing domain");
+    }
+    return { ok: true, value: url.toString() };
+  } catch {
+    return { ok: false, error: `${fieldLabel} must be a valid web address.` };
+  }
+}

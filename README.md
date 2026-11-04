@@ -66,6 +66,13 @@ This app now uses Auth.js session-based protection for project posting, saved pr
 
 - `AUTH_SECRET` and `DATABASE_URL` are required in all environments (no development fallback sign-in)
 
+## Project owner tools
+
+- **My projects** (`/projects/mine`) lists each project you own with its applicants, per-status counts, and one-click Interview / Accept / Decline (with Undo).
+- **Applicant profiles** (`/people/[id]`) show an applicant's full profile and their applications to your projects. A profile is visible only to its owner, admins, and owners of projects the person applied to; anyone else gets a 404.
+- **Contact**: an Email button opens a pre-addressed message to the applicant.
+- Owners see "Manage applicants" instead of "Apply" on their own projects; applicants see their application status; closed projects show "Applications closed".
+
 ## Production deployment checklist (Vercel + Neon/Supabase)
 
 1. Add required environment variables in your deploy environment:
