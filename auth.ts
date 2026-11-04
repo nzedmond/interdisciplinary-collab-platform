@@ -64,6 +64,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
+        if (user.suspendedAt) {
+          return null;
+        }
+
         return {
           id: user.id,
           email: user.email,
@@ -86,9 +90,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           select: {
             id: true,
             name: true,
-            role: true
+            role: true,
+            suspendedAt: true
           }
         });
+
+        // Ends the session (the user is signed out) once an admin suspends them.
+        if (dbUser?.suspendedAt) {
+          return null;
+        }
 
         if (dbUser) {
           token.sub = dbUser.id;

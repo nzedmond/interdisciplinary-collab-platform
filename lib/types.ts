@@ -37,6 +37,8 @@ export type Project = {
   applicants: number;
   matchScore: number;
   recommendationReason: string;
+  verified?: boolean;
+  archived?: boolean;
 };
 
 export type Application = {

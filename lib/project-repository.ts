@@ -158,7 +158,9 @@ function mapProject(project: NonNullable<ProjectWithRelations>, viewerSkills: st
     status: mapProjectStatus(project.status),
     applicants: project._count.applications,
     matchScore: calculateMatchScore(project, viewerSkills),
-    recommendationReason: recommendationReason(project, viewerSkills)
+    recommendationReason: recommendationReason(project, viewerSkills),
+    verified: Boolean(project.verifiedAt),
+    archived: project.status === "ARCHIVED"
   };
 }
 
@@ -245,7 +247,11 @@ async function createProjectSkills(projectId: string, skills: string[], required
 }
 
 export async function getProjects() {
+  // Archived projects were removed by an admin and are hidden from browsing.
   const projects = await prisma.project.findMany({
+    where: {
+      status: { not: "ARCHIVED" }
+    },
     include: {
       owner: true,
       skills: {
@@ -686,10 +692,12 @@ export async function updateOwnedProjectStatus(
   status: Project["status"],
   userId: string
 ) {
+  // Only an admin can restore an archived project, so owners can't change its status.
   const existing = await prisma.project.findFirst({
     where: {
       id: projectId,
-      ownerId: userId
+      ownerId: userId,
+      status: { not: "ARCHIVED" }
     }
   });
 

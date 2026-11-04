@@ -237,7 +237,9 @@ async function main() {
         commitment: project.commitment,
         duration: project.duration,
         goals: project.goals,
-        status: project.status
+        status: project.status,
+        // Faculty and staff projects start verified; the student project is left for an admin to review.
+        verifiedAt: project.ownerRole === "Student" ? null : new Date()
       },
       create: {
         id: project.id,
@@ -249,7 +251,9 @@ async function main() {
         commitment: project.commitment,
         duration: project.duration,
         goals: project.goals,
-        status: project.status
+        status: project.status,
+        // Faculty and staff projects start verified; the student project is left for an admin to review.
+        verifiedAt: project.ownerRole === "Student" ? null : new Date()
       }
     });
 

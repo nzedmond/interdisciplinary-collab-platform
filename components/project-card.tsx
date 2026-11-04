@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Bookmark, BriefcaseBusiness, Clock, GraduationCap, Sparkles, Users } from "lucide-react";
 import type { Project } from "@/lib/types";
+import { VerifiedBadge } from "@/components/verified-badge";
 import { cn } from "@/lib/utils";
 
 type ProjectCardProps = {
@@ -24,6 +25,7 @@ export function ProjectCard({ project, isSaved, onToggleSaved }: ProjectCardProp
             <span className={cn("rounded-full px-3 py-1 text-xs font-semibold", statusStyles[project.status])}>
               {project.status === "open" ? "Open" : project.status === "reviewing" ? "Reviewing" : "Filled"}
             </span>
+            {project.verified ? <VerifiedBadge /> : null}
             <span className="rounded-full bg-blue/10 px-3 py-1 text-xs font-semibold text-blue">
               {project.category}
             </span>

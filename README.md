@@ -62,7 +62,7 @@ This app now uses Auth.js session-based protection for project posting, saved pr
 | `maya.johnson@example.edu` | Student | Browsing, saving, and applying; has two applications |
 | `p-001@example.edu` | Faculty (Prof. Amina Okafor) | Reviewing applicants on an owned project |
 | `p-004@example.edu` | Student (Rina Patel) | A student who owns a project |
-| `admin@example.edu` | Admin | Admin tools (coming next) |
+| `admin@example.edu` | Admin | Admin tools at `/admin` |
 
 - `AUTH_SECRET` and `DATABASE_URL` are required in all environments (no development fallback sign-in)
 
@@ -72,6 +72,17 @@ This app now uses Auth.js session-based protection for project posting, saved pr
 - **Applicant profiles** (`/people/[id]`) show an applicant's full profile and their applications to your projects. A profile is visible only to its owner, admins, and owners of projects the person applied to; anyone else gets a 404.
 - **Contact**: an Email button opens a pre-addressed message to the applicant.
 - Owners see "Manage applicants" instead of "Apply" on their own projects; applicants see their application status; closed projects show "Applications closed".
+
+## Admin tools
+
+Sign in as `admin@example.edu` and open `/admin` (also linked from the dashboard). Non-admins get a 404 there and a 403 from the admin API.
+
+- **Overview**: counts of users by role, projects by status, projects awaiting verification, and applications by status.
+- **Project verification**: Verify / Unverify. Verified projects show a "Verified" badge everywhere.
+- **Moderation**: Archive hides a project from browsing and closes it; only its owner and admins can still open it, and only an admin can Restore it.
+- **User management**: change roles and Suspend / Reinstate. Suspended users can't sign in and their current session ends. Admins can't demote or suspend themselves.
+
+The seed marks faculty and staff projects as verified and leaves the student project for an admin to review.
 
 ## Production deployment checklist (Vercel + Neon/Supabase)
 
@@ -107,6 +118,5 @@ If you do not already have a local PostgreSQL server running, use a hosted devel
 
 ## Suggested Next Milestones
 
-1. Add admin moderation and project verification.
-2. Enable pgvector and store project/user embeddings for semantic matching.
-3. Add analytics for recommendation quality and cross-department collaboration patterns.
+1. Enable pgvector and store project/user embeddings for semantic matching.
+2. Add analytics for recommendation quality and cross-department collaboration patterns.

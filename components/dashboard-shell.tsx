@@ -1,9 +1,8 @@
 "use client";
 
+import type { Route } from "next";
 import Link from "next/link";
 import {
-  BarChart3,
-  Bell,
   BriefcaseBusiness,
   Filter,
   LayoutDashboard,
@@ -25,7 +24,19 @@ type DashboardShellProps = {
   profile: UserProfile;
 };
 
+type NavItem = { label: string; href: Route; icon: typeof LayoutDashboard };
+
+const baseNavItems: NavItem[] = [
+  { label: "Dashboard", href: "/", icon: LayoutDashboard },
+  { label: "My projects", href: "/projects/mine", icon: BriefcaseBusiness },
+  { label: "Post a project", href: "/projects/new", icon: Plus },
+  { label: "Profile", href: "/profile", icon: UserRound }
+];
+
+const adminNavItem: NavItem = { label: "Admin", href: "/admin", icon: ShieldCheck };
+
 export function DashboardShell({ profile }: DashboardShellProps) {
+  const navItems = profile.role === "admin" ? [...baseNavItems, adminNavItem] : baseNavItems;
   const [projects, setProjects] = useState<Project[]>([]);
   const [query, setQuery] = useState("");
   const [department, setDepartment] = useState(departments[0]);
@@ -143,21 +154,15 @@ export function DashboardShell({ profile }: DashboardShellProps) {
             </div>
           </div>
           <nav className="mt-4 space-y-1">
-            {[
-              ["Dashboard", LayoutDashboard],
-              ["Projects", Search],
-              ["Applications", Bell],
-              ["Admin", ShieldCheck],
-              ["Analytics", BarChart3]
-            ].map(([label, Icon]) => (
-              <a
-                key={label as string}
-                href="#"
+            {navItems.map(({ label, href, icon: Icon }) => (
+              <Link
+                key={label}
+                href={href}
                 className="focus-ring flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-ink/70 transition hover:bg-moss/10 hover:text-moss"
               >
                 <Icon className="h-4 w-4" />
-                {label as string}
-              </a>
+                {label}
+              </Link>
             ))}
           </nav>
         </div>
@@ -195,6 +200,15 @@ export function DashboardShell({ profile }: DashboardShellProps) {
                 <UserRound className="h-4 w-4" />
                 Profile
               </Link>
+              {profile.role === "admin" ? (
+                <Link
+                  href="/admin"
+                  className="focus-ring inline-flex items-center gap-2 rounded-md border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-moss hover:text-moss"
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  Admin
+                </Link>
+              ) : null}
             </div>
           </div>
 

@@ -14,6 +14,8 @@ import { SaveProjectButton } from "@/components/save-project-button";
 import { getProjectById } from "@/lib/projects";
 import { getProjectAuthorizationContext, getViewerApplication } from "@/lib/project-repository";
 import { getSessionUserId } from "@/lib/session-user";
+import { VerifiedBadge } from "@/components/verified-badge";
+import { getSessionAdminId } from "@/lib/admin-repository";
 import { cn, statusLabel } from "@/lib/utils";
 
 type ProjectDetailPageProps = {
@@ -41,6 +43,12 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
   }
 
   const isOwner = viewerId === context.ownerId;
+  const isArchived = context.status === "ARCHIVED";
+
+  // Archived projects stay visible to their owner and admins only.
+  if (isArchived && !isOwner && !(await getSessionAdminId())) {
+    notFound();
+  }
   const viewerApplication = viewerId && !isOwner ? await getViewerApplication(project.id, viewerId) : null;
   const isAcceptingApplications = context.status === "OPEN";
 
@@ -55,12 +63,19 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
       </Link>
 
       <section className="mt-5 rounded-lg border border-ink/10 bg-white/90 p-6 shadow-soft backdrop-blur">
+        {isArchived ? (
+          <p className="mb-5 rounded-md border border-coral/30 bg-coral/10 px-4 py-3 text-sm text-ink">
+            An admin archived this project, so it&apos;s hidden from browsing and closed to applications. Only you and
+            admins can see this page.
+          </p>
+        ) : null}
         <div className="flex flex-wrap items-start justify-between gap-5">
           <div className="min-w-0 flex-1">
             <div className="mb-4 flex flex-wrap items-center gap-2">
               <span className={cn("rounded-full px-3 py-1 text-xs font-semibold", statusStyles[project.status])}>
                 {project.status === "open" ? "Open" : project.status === "reviewing" ? "Reviewing" : "Filled"}
               </span>
+              {project.verified ? <VerifiedBadge /> : null}
               <span className="rounded-full bg-blue/10 px-3 py-1 text-xs font-semibold text-blue">
                 {project.category}
               </span>
