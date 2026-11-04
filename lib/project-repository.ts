@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
-import { embedTexts } from "@/lib/embeddings";
-import { cosineSimilarity, profileText, projectText, scoreMatch, type MatchableProfile } from "@/lib/matching";
+import { scoreProjectsForProfile } from "@/lib/match-service";
+import type { MatchableProfile } from "@/lib/matching";
 import { getSessionUserId } from "@/lib/session-user";
 import type { Prisma } from "@prisma/client";
 import type { Application, OwnedProjectApplication, Project, UserProfile } from "@/lib/types";
@@ -120,54 +120,16 @@ const getViewerProfile = cache(async (): Promise<MatchableProfile | null> => {
 });
 
 const emptyProfile: MatchableProfile = { skills: [], interests: [] };
-let hasWarnedAboutEmbeddings = false;
 
 type UnscoredProject = Omit<
   Project,
   "matchScore" | "recommendationReason" | "semanticScore" | "keywordScore" | "matchMethod"
 >;
 
-// Adds match scores and reasons. Uses the local embedding model when it's available,
-// and falls back to keyword (exact skill) matching if it can't load, so pages never break.
+// Adds the signed-in viewer's match scores and reasons.
 async function withMatches(projects: UnscoredProject[]): Promise<Project[]> {
-  const profile = (await getViewerProfile()) ?? emptyProfile;
-  const viewerText = profileText(profile);
-  const tags = [
-    ...profile.skills.map((tag) => ({ tag, kind: "skill" as const })),
-    ...profile.interests.map((tag) => ({ tag, kind: "interest" as const }))
-  ];
-  let vectors: Map<string, number[]> | null = null;
-
-  if (viewerText && projects.length > 0) {
-    try {
-      vectors = await embedTexts([viewerText, ...tags.map(({ tag }) => tag), ...projects.map(projectText)]);
-    } catch (error) {
-      if (!hasWarnedAboutEmbeddings) {
-        hasWarnedAboutEmbeddings = true;
-        console.warn("[matching] embedding model unavailable; using keyword matching instead.", error);
-      }
-    }
-  }
-
-  const viewerVector = vectors?.get(viewerText);
-
-  return projects.map((project) => {
-    const projectVector = vectors?.get(projectText(project));
-    const canUseEmbeddings = Boolean(viewerVector && projectVector);
-    const match = scoreMatch({
-      project,
-      profile,
-      similarity: canUseEmbeddings ? cosineSimilarity(viewerVector!, projectVector!) : null,
-      tagSimilarities: canUseEmbeddings
-        ? tags.flatMap(({ tag, kind }) => {
-            const tagVector = vectors!.get(tag);
-            return tagVector ? [{ tag, kind, similarity: cosineSimilarity(tagVector, projectVector!) }] : [];
-          })
-        : []
-    });
-
-    return { ...project, ...match };
-  });
+  const matches = await scoreProjectsForProfile((await getViewerProfile()) ?? emptyProfile, projects);
+  return projects.map((project, index) => ({ ...project, ...matches[index] }));
 }
 
 async function withMatch(project: UnscoredProject) {

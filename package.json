@@ -8,12 +8,13 @@
     "start": "next start",
     "lint": "next lint",
     "smoke:api": "bash scripts/smoke-api.sh",
-    "test:api": "vitest run \"app/api/critical-flow.test.js\" \"app/api/projects/route.test.js\" \"app/api/projects/[id]/route.test.js\" \"app/api/profile/route.test.js\" \"app/api/saved-projects/route.test.js\" \"app/api/projects/[id]/applications/route.test.js\" \"app/api/applications/[id]/route.test.js\" \"app/api/admin/projects/[id]/route.test.js\" \"app/api/admin/users/[id]/route.test.js\" \"lib/matching.test.js\" \"lib/project-repository.matching.test.js\"",
+    "test:api": "vitest run \"app/api/critical-flow.test.js\" \"app/api/projects/route.test.js\" \"app/api/projects/[id]/route.test.js\" \"app/api/profile/route.test.js\" \"app/api/saved-projects/route.test.js\" \"app/api/projects/[id]/applications/route.test.js\" \"app/api/applications/[id]/route.test.js\" \"app/api/admin/projects/[id]/route.test.js\" \"app/api/admin/users/[id]/route.test.js\" \"lib/matching.test.js\" \"lib/project-repository.matching.test.js\" \"lib/analytics-metrics.test.js\" \"app/api/admin/analytics/export/route.test.js\"",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "node prisma/seed.js",
     "test": "vitest run",
-    "embeddings:warm": "node scripts/warm-embeddings.mjs"
+    "embeddings:warm": "node scripts/warm-embeddings.mjs",
+    "seed:demo-activity": "node prisma/seed-demo-activity.js"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.4",

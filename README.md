@@ -104,6 +104,30 @@ Sign in as `admin@example.edu` and open `/admin` (also linked from the dashboard
 
 The seed marks faculty and staff projects as verified and leaves the student project for an admin to review.
 
+## Research analytics
+
+Admins open **Admin tools → Analytics** (`/admin/analytics`).
+
+- **Interdisciplinary participation**: cross-department application and acceptance rates,
+  students who applied, acceptance rate.
+- **Recommendation quality**: for every application, the chosen project is ranked among all
+  active projects the applicant could have picked, separately by semantic, keyword, and hybrid
+  scores. Reports mean rank percentile (50% = random) and top-1 / top-3 hit rates. Ties count
+  half, so keyword matching's many zero scores neither help nor hurt it.
+- **Department collaboration network**: heatmap of applicant department → project department.
+- **Skill demand vs supply** and the **application funnel**.
+- **Export CSV** (`/api/admin/analytics/export`): one anonymized row per application (hashed
+  keys; no names, emails, or messages), including each method's score and percentile and a
+  `synthetic` flag.
+
+### Demo activity (synthetic)
+
+`npm run seed:demo-activity` adds 12 demo students, 4 demo faculty projects, and 26
+applications (all `@demo.example.edu`, password `collab-demo`) so the analytics page has data.
+Every `example.edu` account is treated as synthetic: the analytics page shows a warning and the
+CSV flags those rows. Remove the demo activity with
+`npm run seed:demo-activity -- --remove` before collecting real data.
+
 ## Production deployment checklist (Vercel + Neon/Supabase)
 
 1. Add required environment variables in your deploy environment:
@@ -138,4 +162,6 @@ If you do not already have a local PostgreSQL server running, use a hosted devel
 
 ## Suggested Next Milestones
 
-1. Add analytics for recommendation quality and cross-department collaboration patterns.
+1. Deploy (Vercel + Neon/Supabase) and confirm the local embedding model runs there.
+2. Email verification for sign-up before inviting real users.
+3. Collect real usage and evaluate semantic vs keyword matching with the analytics export.

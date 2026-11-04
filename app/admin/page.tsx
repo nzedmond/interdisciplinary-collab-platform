@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, BarChart3 } from "lucide-react";
 import { AdminProjects } from "@/components/admin-projects";
 import { AdminUsers } from "@/components/admin-users";
 import { getAdminOverview, getSessionAdminId, listProjectsForAdmin, listUsersForAdmin } from "@/lib/admin-repository";
@@ -31,13 +31,22 @@ export default async function AdminPage() {
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
-      <Link
-        href="/"
-        className="focus-ring inline-flex items-center gap-2 rounded-md border border-ink/15 bg-white px-3 py-2 text-sm font-semibold text-ink transition hover:border-moss hover:text-moss"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Dashboard
-      </Link>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link
+          href="/"
+          className="focus-ring inline-flex items-center gap-2 rounded-md border border-ink/15 bg-white px-3 py-2 text-sm font-semibold text-ink transition hover:border-moss hover:text-moss"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Dashboard
+        </Link>
+        <Link
+          href="/admin/analytics"
+          className="focus-ring inline-flex items-center gap-2 rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white transition hover:bg-moss"
+        >
+          <BarChart3 className="h-4 w-4" />
+          Analytics
+        </Link>
+      </div>
 
       <section className="mt-5 rounded-lg border border-ink/10 bg-white/90 p-6 shadow-soft">
         <p className="text-sm font-semibold text-moss">Administration</p>
