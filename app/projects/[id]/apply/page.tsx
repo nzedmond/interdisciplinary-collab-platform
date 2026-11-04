@@ -16,7 +16,7 @@ export default async function ApplyPage({ params }: ApplyPageProps) {
   const session = await auth();
 
   if (!session?.user?.email) {
-    redirect(`/api/auth/signin?callbackUrl=${encodeURIComponent(`/projects/${id}/apply`)}`);
+    redirect(`/login?callbackUrl=${encodeURIComponent(`/projects/${id}/apply`)}`);
   }
 
   const project = await getProjectById(id);

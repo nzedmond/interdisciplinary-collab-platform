@@ -1,6 +1,16 @@
+const { randomBytes, scryptSync } = require("node:crypto");
 const { PrismaClient } = require("@prisma/client");
 
 const prisma = new PrismaClient();
+
+// Every seeded account signs in with this password. Demo data only.
+const DEMO_PASSWORD = "collab-demo";
+
+// Same "<salt>:<hash>" format as lib/password.ts.
+function hashPassword(password) {
+  const salt = randomBytes(16).toString("hex");
+  return `${salt}:${scryptSync(password, salt, 64).toString("hex")}`;
+}
 
 const currentUser = {
   id: "user-1",
@@ -118,6 +128,7 @@ async function seedUserProfile(user) {
     where: { email: user.email },
     update: {
       name: user.name,
+      passwordHash: hashPassword(DEMO_PASSWORD),
       department: user.department,
       majorOrTitle: user.majorOrTitle,
       graduationYear: user.graduationYear,
@@ -128,6 +139,7 @@ async function seedUserProfile(user) {
       id: user.id,
       email: user.email,
       name: user.name,
+      passwordHash: hashPassword(DEMO_PASSWORD),
       role: "STUDENT",
       department: user.department,
       majorOrTitle: user.majorOrTitle,
@@ -183,17 +195,31 @@ async function seedUserProfile(user) {
 async function main() {
   const demoUser = await seedUserProfile(currentUser);
 
+  await prisma.user.upsert({
+    where: { email: "admin@example.edu" },
+    update: { role: "ADMIN", passwordHash: hashPassword(DEMO_PASSWORD) },
+    create: {
+      email: "admin@example.edu",
+      name: "Platform Admin",
+      role: "ADMIN",
+      majorOrTitle: "Collab Commons administrator",
+      passwordHash: hashPassword(DEMO_PASSWORD)
+    }
+  });
+
   for (const project of projects) {
     const owner = await prisma.user.upsert({
       where: { email: `${project.id}@example.edu` },
       update: {
         name: project.owner,
+        passwordHash: hashPassword(DEMO_PASSWORD),
         department: project.departments[0],
         majorOrTitle: project.ownerRole
       },
       create: {
         email: `${project.id}@example.edu`,
         name: project.owner,
+        passwordHash: hashPassword(DEMO_PASSWORD),
         role: project.ownerRole === "Student" ? "STUDENT" : "FACULTY",
         department: project.departments[0],
         majorOrTitle: project.ownerRole
@@ -267,6 +293,7 @@ async function main() {
 main()
   .then(async () => {
     await prisma.$disconnect();
+    console.log(`Seed complete. Demo accounts use the password "${DEMO_PASSWORD}".`);
   })
   .catch(async (error) => {
     console.error(error);

@@ -8,7 +8,7 @@ export default async function MyProjectsPage() {
   const session = await auth();
 
   if (!session?.user?.email) {
-    redirect("/api/auth/signin?callbackUrl=%2Fprojects%2Fmine");
+    redirect("/login?callbackUrl=%2Fprojects%2Fmine");
   }
 
   return (

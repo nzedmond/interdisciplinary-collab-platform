@@ -7,6 +7,7 @@ import {
   BriefcaseBusiness,
   Filter,
   LayoutDashboard,
+  LogOut,
   Plus,
   Search,
   ShieldCheck,
@@ -14,12 +15,17 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ProjectCard } from "@/components/project-card";
-import { categories, currentUser, departments } from "@/lib/data";
+import { logoutAction } from "@/lib/auth-actions";
+import { categories, departments } from "@/lib/data";
 import type { Application, Project, UserProfile } from "@/lib/types";
 import { useSavedProjects } from "@/lib/use-saved-projects";
 import { statusLabel } from "@/lib/utils";
 
-export function DashboardShell() {
+type DashboardShellProps = {
+  profile: UserProfile;
+};
+
+export function DashboardShell({ profile }: DashboardShellProps) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [query, setQuery] = useState("");
   const [department, setDepartment] = useState(departments[0]);
@@ -27,7 +33,6 @@ export function DashboardShell() {
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
   const [projectError, setProjectError] = useState<string | null>(null);
   const [applications, setApplications] = useState<Application[]>([]);
-  const [profile, setProfile] = useState<UserProfile>(currentUser);
   const { savedProjectIds, toggleSavedProject } = useSavedProjects();
 
   useEffect(() => {
@@ -66,30 +71,6 @@ export function DashboardShell() {
     return () => controller.abort();
   }, []);
 
-  useEffect(() => {
-    const controller = new AbortController();
-
-    async function loadProfile() {
-      try {
-        const response = await fetch("/api/profile", {
-          signal: controller.signal
-        });
-
-        if (!response.ok) {
-          return;
-        }
-
-        const data = (await response.json()) as { profile: UserProfile };
-        setProfile(data.profile);
-      } catch {
-        setProfile(currentUser);
-      }
-    }
-
-    loadProfile();
-
-    return () => controller.abort();
-  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -311,8 +292,31 @@ export function DashboardShell() {
 
           <aside className="space-y-6">
             <section className="rounded-lg border border-ink/10 bg-white/90 p-5 shadow-soft">
-              <h2 className="text-lg font-semibold text-ink">{profile.name}</h2>
-              <p className="mt-1 text-sm text-ink/65">{profile.majorOrTitle || "Add your title in profile"}</p>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <Link href="/profile" className="text-lg font-semibold text-ink hover:text-moss hover:underline">
+                    {profile.name}
+                  </Link>
+                  <p className="mt-1 text-sm text-ink/65">{profile.majorOrTitle || "Add your title in profile"}</p>
+                </div>
+                <form action={logoutAction}>
+                  <button
+                    type="submit"
+                    className="focus-ring inline-flex items-center gap-1 rounded-md border border-ink/15 px-2 py-1 text-xs font-semibold text-ink/70 transition hover:border-coral hover:text-coral"
+                  >
+                    <LogOut className="h-3 w-3" />
+                    Sign out
+                  </button>
+                </form>
+              </div>
+              {profile.skills.length === 0 ? (
+                <p className="mt-4 text-sm text-ink/60">
+                  <Link href="/profile" className="font-semibold text-moss hover:underline">
+                    Add skills to your profile
+                  </Link>{" "}
+                  to get better project matches.
+                </p>
+              ) : null}
               <div className="mt-4 flex flex-wrap gap-2">
                 {profile.skills.slice(0, 5).map((skill) => (
                   <span key={skill} className="rounded-full bg-moss/10 px-3 py-1 text-xs font-semibold text-moss">

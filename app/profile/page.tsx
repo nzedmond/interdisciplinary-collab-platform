@@ -8,7 +8,7 @@ export default async function ProfilePage() {
   const session = await auth();
 
   if (!session?.user?.email) {
-    redirect("/api/auth/signin?callbackUrl=%2Fprofile");
+    redirect("/login?callbackUrl=%2Fprofile");
   }
 
   return (

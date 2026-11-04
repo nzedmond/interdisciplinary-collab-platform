@@ -1,17 +1,4 @@
-import type { Application, Project, UserProfile } from "@/lib/types";
-
-export const currentUser: UserProfile = {
-  id: "user-1",
-  name: "Maya Johnson",
-  role: "student",
-  department: "Computer Science",
-  majorOrTitle: "Data Science major, Studio Art minor",
-  graduationYear: 2027,
-  skills: ["Python", "Data visualization", "Interview research", "React", "Storytelling"],
-  interests: ["Climate justice", "Public humanities", "Creative coding", "Community archives"],
-  portfolioUrl: "https://example.edu/maya",
-  githubUrl: "https://github.com/example"
-};
+import type { Application, Project } from "@/lib/types";
 
 export const projects: Project[] = [
   {

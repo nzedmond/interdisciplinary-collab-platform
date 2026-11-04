@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import { verifyPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
 
 type SessionRole = "student" | "faculty" | "admin";
@@ -26,8 +27,11 @@ function toSessionRole(role: string): SessionRole {
   return "student";
 }
 
-export const { handlers, auth } = NextAuth({
+export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: authSecret,
+  pages: {
+    signIn: "/login"
+  },
   session: {
     strategy: "jwt"
   },
@@ -35,35 +39,30 @@ export const { handlers, auth } = NextAuth({
     Credentials({
       name: "University email",
       credentials: {
-        name: {
-          label: "Full name",
-          type: "text"
-        },
         email: {
           label: "University email",
           type: "email"
+        },
+        password: {
+          label: "Password",
+          type: "password"
         }
       },
+      // Accounts are created at /signup; sign-in only checks an existing email + password.
       async authorize(credentials) {
         const email =
           typeof credentials.email === "string" ? credentials.email.trim().toLowerCase() : "";
-        const name = typeof credentials.name === "string" ? credentials.name.trim() : "";
+        const password = typeof credentials.password === "string" ? credentials.password : "";
 
-        if (!email.endsWith(".edu") || !name) {
+        if (!email || !password) {
           return null;
         }
 
-        const user = await prisma.user.upsert({
-          where: { email },
-          update: {
-            name
-          },
-          create: {
-            email,
-            name,
-            role: "STUDENT"
-          }
-        });
+        const user = await prisma.user.findUnique({ where: { email } });
+
+        if (!user?.passwordHash || !(await verifyPassword(password, user.passwordHash))) {
+          return null;
+        }
 
         return {
           id: user.id,

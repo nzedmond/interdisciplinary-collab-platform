@@ -22,7 +22,7 @@ This MVP scaffolds the first usable slice of the product: students can browse ca
 - Tailwind CSS
 - Prisma
 - PostgreSQL
-- Auth.js-ready structure
+- Auth.js (email + password, JWT sessions)
 
 ## Getting Started
 
@@ -50,8 +50,20 @@ Open [http://localhost:3000](http://localhost:3000).
 
 This app now uses Auth.js session-based protection for project posting, saved projects, applications, and owner-review endpoints.
 
-- Sign in at [http://localhost:3000/api/auth/signin](http://localhost:3000/api/auth/signin)
-- Use a `.edu` email address for the credentials sign-in flow
+- Every page requires sign-in. Sign in at [http://localhost:3000/login](http://localhost:3000/login) with email and password.
+- New users create an account at `/signup` with a `.edu` email, choosing student or faculty. Passwords are hashed with scrypt.
+- API routes check the session themselves and return `401` when signed out.
+- There is no email verification yet, so anyone can sign up with any `.edu` address.
+
+`npm run prisma:seed` creates these demo accounts, all with the password `collab-demo`:
+
+| Email | Role | Useful for |
+|---|---|---|
+| `maya.johnson@example.edu` | Student | Browsing, saving, and applying; has two applications |
+| `p-001@example.edu` | Faculty (Prof. Amina Okafor) | Reviewing applicants on an owned project |
+| `p-004@example.edu` | Student (Rina Patel) | A student who owns a project |
+| `admin@example.edu` | Admin | Admin tools (coming next) |
+
 - `AUTH_SECRET` and `DATABASE_URL` are required in all environments (no development fallback sign-in)
 
 ## Production deployment checklist (Vercel + Neon/Supabase)
@@ -88,8 +100,6 @@ If you do not already have a local PostgreSQL server running, use a hosted devel
 
 ## Suggested Next Milestones
 
-1. Wire Auth.js university-email login and role-based sessions.
-2. Replace dashboard profile data with the authenticated database user.
-3. Add admin moderation and project verification.
-4. Enable pgvector and store project/user embeddings for semantic matching.
-5. Add analytics for recommendation quality and cross-department collaboration patterns.
+1. Add admin moderation and project verification.
+2. Enable pgvector and store project/user embeddings for semantic matching.
+3. Add analytics for recommendation quality and cross-department collaboration patterns.

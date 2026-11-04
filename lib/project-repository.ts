@@ -1,5 +1,6 @@
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
-import { currentUser } from "@/lib/data";
+import { getSessionUserId } from "@/lib/session-user";
 import type { Application, OwnedProjectApplication, Project } from "@/lib/types";
 
 type ProjectWithRelations = Awaited<ReturnType<typeof fetchProjectById>>;
@@ -84,22 +85,46 @@ function roleLabel(role: string, majorOrTitle?: string | null): Project["ownerRo
   return "Student";
 }
 
-function calculateMatchScore(project: {
-  skills: { skill: { name: string }; required: boolean }[];
-}) {
-  const userSkills = new Set(currentUser.skills.map((skill) => skill.toLowerCase()));
+// Match scores are personal: they compare each project with the signed-in viewer's
+// skills. Loaded once per request; signed-out viewers get no skill matches.
+const getViewerSkills = cache(async (): Promise<string[]> => {
+  const userId = await getSessionUserId();
+
+  if (!userId) {
+    return [];
+  }
+
+  const userSkills = await prisma.userSkill.findMany({
+    where: { userId },
+    select: { skill: { select: { name: true } } }
+  });
+
+  return userSkills.map(({ skill }) => skill.name);
+});
+
+function calculateMatchScore(
+  project: {
+    skills: { skill: { name: string }; required: boolean }[];
+  },
+  viewerSkills: string[]
+) {
+  const userSkills = new Set(viewerSkills.map((skill) => skill.toLowerCase()));
   const projectSkills = project.skills.map(({ skill }) => skill.name.toLowerCase());
   const overlap = projectSkills.filter((skill) => userSkills.has(skill)).length;
 
   return Math.min(98, 68 + overlap * 8);
 }
 
-function recommendationReason(project: {
-  skills: { skill: { name: string }; required: boolean }[];
-}) {
+function recommendationReason(
+  project: {
+    skills: { skill: { name: string }; required: boolean }[];
+  },
+  viewerSkills: string[]
+) {
+  const userSkills = new Set(viewerSkills.map((skill) => skill.toLowerCase()));
   const matches = project.skills
     .map(({ skill }) => skill.name)
-    .filter((skill) => currentUser.skills.includes(skill));
+    .filter((skill) => userSkills.has(skill.toLowerCase()));
 
   if (matches.length > 0) {
     return `Recommended because it matches ${matches.slice(0, 3).join(", ")}.`;
@@ -108,7 +133,7 @@ function recommendationReason(project: {
   return "Recommended as a new interdisciplinary opportunity. Matching will improve once embeddings are connected.";
 }
 
-function mapProject(project: NonNullable<ProjectWithRelations>): Project {
+function mapProject(project: NonNullable<ProjectWithRelations>, viewerSkills: string[]): Project {
   const requiredSkills = project.skills
     .filter((projectSkill) => projectSkill.required)
     .map((projectSkill) => projectSkill.skill.name);
@@ -131,8 +156,8 @@ function mapProject(project: NonNullable<ProjectWithRelations>): Project {
     goals: project.goals,
     status: mapProjectStatus(project.status),
     applicants: project._count.applications,
-    matchScore: calculateMatchScore(project),
-    recommendationReason: recommendationReason(project)
+    matchScore: calculateMatchScore(project, viewerSkills),
+    recommendationReason: recommendationReason(project, viewerSkills)
   };
 }
 
@@ -243,13 +268,14 @@ export async function getProjects() {
     }
   });
 
-  return projects.map(mapProject);
+  const viewerSkills = await getViewerSkills();
+  return projects.map((project) => mapProject(project, viewerSkills));
 }
 
 export async function getProjectById(id: string) {
   const project = await fetchProjectById(id);
 
-  return project ? mapProject(project) : null;
+  return project ? mapProject(project, await getViewerSkills()) : null;
 }
 
 export async function getUserProfile(userId: string) {
@@ -433,7 +459,8 @@ export async function getOwnedProjects(userId: string) {
     }
   });
 
-  return projects.map(mapProject);
+  const viewerSkills = await getViewerSkills();
+  return projects.map((project) => mapProject(project, viewerSkills));
 }
 
 export async function createProject(input: {
@@ -469,7 +496,7 @@ export async function createProject(input: {
     throw new Error("Project could not be loaded after creation.");
   }
 
-  return mapProject(createdProject);
+  return mapProject(createdProject, await getViewerSkills());
 }
 
 export async function getSavedProjectIds(userId: string) {
@@ -672,5 +699,5 @@ export async function updateOwnedProjectStatus(
   });
 
   const updated = await fetchProjectById(projectId);
-  return updated ? mapProject(updated) : null;
+  return updated ? mapProject(updated, await getViewerSkills()) : null;
 }
