@@ -20,9 +20,13 @@ check_status() {
   echo "[$label] $code"
 }
 
-check_status "home-page" "200" "$BASE_URL/"
-check_status "auth-signin" "200" "$BASE_URL/api/auth/signin"
+# Every page requires sign-in, so signed-out visitors are redirected to /login.
+check_status "home-redirects-to-login" "307" "$BASE_URL/"
+check_status "login-page" "200" "$BASE_URL/login"
+check_status "signup-page" "200" "$BASE_URL/signup"
+check_status "auth-csrf" "200" "$BASE_URL/api/auth/csrf"
 check_status "protected-project-create" "401" -X POST "$BASE_URL/api/projects" -H "Content-Type: application/json" -d "{}"
 check_status "protected-profile-get" "401" "$BASE_URL/api/profile"
+check_status "protected-admin-export" "401" "$BASE_URL/api/admin/analytics/export"
 
 echo "Smoke API checks passed."

@@ -14,7 +14,10 @@
     "prisma:seed": "node prisma/seed.js",
     "test": "vitest run",
     "embeddings:warm": "node scripts/warm-embeddings.mjs",
-    "seed:demo-activity": "node prisma/seed-demo-activity.js"
+    "seed:demo-activity": "node prisma/seed-demo-activity.js",
+    "postinstall": "prisma generate",
+    "vercel-build": "prisma migrate deploy && npm run embeddings:warm && next build",
+    "make-admin": "node scripts/make-admin.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.4",

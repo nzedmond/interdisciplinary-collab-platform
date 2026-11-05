@@ -5,6 +5,9 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  // Migrations need a direct (non-pooled) connection. Locally this is the same as
+  // DATABASE_URL; on Neon use the connection string without "-pooler".
+  directUrl = env("DIRECT_URL")
 }
 
 enum Role {

@@ -136,18 +136,11 @@ Every `example.edu` account is treated as synthetic: the analytics page shows a 
 CSV flags those rows. Remove the demo activity with
 `npm run seed:demo-activity -- --remove` before collecting real data.
 
-## Production deployment checklist (Vercel + Neon/Supabase)
+## Deployment
 
-1. Add required environment variables in your deploy environment:
-   - `DATABASE_URL`
-   - `AUTH_SECRET`
-   - `AUTH_URL` (set to your deployed app URL)
-2. Provision and migrate your PostgreSQL database before first traffic:
-   - `npm run prisma:generate`
-   - `npm run prisma:migrate`
-   - `npm run prisma:seed` (optional for sample data)
-3. Run post-deploy smoke checks:
-   - `BASE_URL=https://your-app-domain npm run smoke:api`
+See **[DEPLOY.md](DEPLOY.md)** for step-by-step setup on Vercel + Neon with an SMTP provider,
+creating the first admin (`npm run make-admin -- you@college.edu`), and post-deploy checks
+(`BASE_URL=https://your-app npm run smoke:api`).
 
 ## Database Setup
 
@@ -170,6 +163,5 @@ If you do not already have a local PostgreSQL server running, use a hosted devel
 
 ## Suggested Next Milestones
 
-1. Deploy (Vercel + Neon/Supabase) and confirm the local embedding model runs there.
-2. Configure SMTP so verification emails are delivered.
-3. Collect real usage and evaluate semantic vs keyword matching with the analytics export.
+1. Deploy following DEPLOY.md (Vercel + Neon + SMTP).
+2. Collect real usage and evaluate semantic vs keyword matching with the analytics export.

@@ -47,12 +47,13 @@ export async function sendVerificationEmail(details: SignupDetails): Promise<Ver
   }
 
   const token = randomBytes(32).toString("base64url");
+  const tokenHash = hashToken(token);
   await prisma.pendingSignup.create({
-    data: { ...details, tokenHash: hashToken(token), expiresAt: new Date(now + VERIFICATION_TTL_MS) }
+    data: { ...details, tokenHash, expiresAt: new Date(now + VERIFICATION_TTL_MS) }
   });
 
   const link = `${appUrl()}/verify-email?token=${token}`;
-  const result = await sendEmail({
+  const message = {
     to: details.email,
     subject: "Confirm your Collab Commons account",
     text: [
@@ -67,7 +68,17 @@ export async function sendVerificationEmail(details: SignupDetails): Promise<Ver
 <p>Confirm your email to finish creating your Collab Commons account:</p>
 <p><a href="${link}">Confirm my email</a></p>
 <p>The link expires in 24 hours. If you didn't sign up, ignore this email and nothing will change.</p>`
-  });
+  };
+
+  let result: Awaited<ReturnType<typeof sendEmail>>;
+  try {
+    result = await sendEmail(message);
+  } catch (error) {
+    // Nothing was sent: drop the pending sign-up so it doesn't count against the
+    // address's email limit or linger as a dead link.
+    await prisma.pendingSignup.delete({ where: { tokenHash } }).catch(() => {});
+    throw error;
+  }
 
   return { ok: true, devLink: "loggedForDevelopment" in result && isDevelopmentEmailFallback() ? link : undefined };
 }
