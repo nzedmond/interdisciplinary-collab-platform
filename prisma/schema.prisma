@@ -31,6 +31,8 @@ model User {
   id             String        @id @default(cuid())
   email          String        @unique
   passwordHash   String?
+  // Set when the person proves they own the email address. Sign-in requires it.
+  emailVerifiedAt DateTime?
   name           String
   role           Role          @default(STUDENT)
   department     String?
@@ -157,4 +159,20 @@ model TextEmbedding {
   model     String
   embedding Json
   createdAt DateTime @default(now())
+}
+
+// A sign-up waiting for its email link to be clicked. The account isn't created or
+// changed until then, so typing someone else's email can't alter their account.
+// Only a SHA-256 hash of the emailed token is stored.
+model PendingSignup {
+  tokenHash    String   @id
+  email        String
+  name         String
+  role         Role     @default(STUDENT)
+  department   String?
+  passwordHash String
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  @@index([email])
 }

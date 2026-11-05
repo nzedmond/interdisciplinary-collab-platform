@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "smoke:api": "bash scripts/smoke-api.sh",
-    "test:api": "vitest run \"app/api/critical-flow.test.js\" \"app/api/projects/route.test.js\" \"app/api/projects/[id]/route.test.js\" \"app/api/profile/route.test.js\" \"app/api/saved-projects/route.test.js\" \"app/api/projects/[id]/applications/route.test.js\" \"app/api/applications/[id]/route.test.js\" \"app/api/admin/projects/[id]/route.test.js\" \"app/api/admin/users/[id]/route.test.js\" \"lib/matching.test.js\" \"lib/project-repository.matching.test.js\" \"lib/analytics-metrics.test.js\" \"app/api/admin/analytics/export/route.test.js\"",
+    "test:api": "vitest run \"app/api/critical-flow.test.js\" \"app/api/projects/route.test.js\" \"app/api/projects/[id]/route.test.js\" \"app/api/profile/route.test.js\" \"app/api/saved-projects/route.test.js\" \"app/api/projects/[id]/applications/route.test.js\" \"app/api/applications/[id]/route.test.js\" \"app/api/admin/projects/[id]/route.test.js\" \"app/api/admin/users/[id]/route.test.js\" \"lib/matching.test.js\" \"lib/project-repository.matching.test.js\" \"lib/analytics-metrics.test.js\" \"app/api/admin/analytics/export/route.test.js\" \"lib/email-verification.test.js\"",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "node prisma/seed.js",
@@ -24,12 +24,14 @@
     "lucide-react": "^0.468.0",
     "next": "^15.1.0",
     "next-auth": "^5.0.0-beta.25",
+    "nodemailer": "7.0.13",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tailwind-merge": "^2.5.5"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "@types/nodemailer": "7.0.12",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
     "autoprefixer": "^10.4.20",

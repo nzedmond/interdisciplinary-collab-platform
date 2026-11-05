@@ -150,7 +150,8 @@ async function add() {
         role: "FACULTY",
         department: person.department,
         majorOrTitle: person.title,
-        passwordHash
+        passwordHash,
+        emailVerifiedAt: new Date()
       }
     });
     userIds[person.key] = user.id;
@@ -168,7 +169,8 @@ async function add() {
         majorOrTitle: person.major,
         graduationYear: person.year,
         bio: person.bio,
-        passwordHash
+        passwordHash,
+        emailVerifiedAt: new Date()
       }
     });
     userIds[person.key] = user.id;

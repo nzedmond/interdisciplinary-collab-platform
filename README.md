@@ -53,7 +53,15 @@ This app now uses Auth.js session-based protection for project posting, saved pr
 - Every page requires sign-in. Sign in at [http://localhost:3000/login](http://localhost:3000/login) with email and password.
 - New users create an account at `/signup` with a `.edu` email, choosing student or faculty. Passwords are hashed with scrypt.
 - API routes check the session themselves and return `401` when signed out.
-- There is no email verification yet, so anyone can sign up with any `.edu` address.
+- **Email verification**: sign-up emails a confirmation link (valid 24 hours). The account
+  isn't created, or an existing passwordless account claimed, until the link is confirmed, and
+  unverified people can't sign in. Signing in with the right password before confirming sends a
+  fresh link. At most 3 emails per address per 15 minutes. Only a hash of each link's token is stored.
+- **Sending email**: set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, and `EMAIL_FROM`
+  (any SMTP provider: your college's server, Gmail with an app password, Resend, Mailgun...).
+  In `npm run dev` without SMTP, the link is printed in the server log and shown on screen
+  instead. In production without SMTP, sign-up is refused rather than skipping verification.
+- Students and faculty choose their own role at sign-up; admins can correct roles in Admin tools.
 
 `npm run prisma:seed` creates these demo accounts, all with the password `collab-demo`:
 
@@ -163,5 +171,5 @@ If you do not already have a local PostgreSQL server running, use a hosted devel
 ## Suggested Next Milestones
 
 1. Deploy (Vercel + Neon/Supabase) and confirm the local embedding model runs there.
-2. Email verification for sign-up before inviting real users.
+2. Configure SMTP so verification emails are delivered.
 3. Collect real usage and evaluate semantic vs keyword matching with the analytics export.

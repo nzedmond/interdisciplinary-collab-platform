@@ -64,7 +64,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
-        if (user.suspendedAt) {
+        // Suspended accounts and accounts that never confirmed their email can't sign in.
+        if (user.suspendedAt || !user.emailVerifiedAt) {
           return null;
         }
 

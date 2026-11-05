@@ -129,6 +129,7 @@ async function seedUserProfile(user) {
     update: {
       name: user.name,
       passwordHash: hashPassword(DEMO_PASSWORD),
+      emailVerifiedAt: new Date(),
       department: user.department,
       majorOrTitle: user.majorOrTitle,
       graduationYear: user.graduationYear,
@@ -140,6 +141,7 @@ async function seedUserProfile(user) {
       email: user.email,
       name: user.name,
       passwordHash: hashPassword(DEMO_PASSWORD),
+      emailVerifiedAt: new Date(),
       role: "STUDENT",
       department: user.department,
       majorOrTitle: user.majorOrTitle,
@@ -197,13 +199,14 @@ async function main() {
 
   await prisma.user.upsert({
     where: { email: "admin@example.edu" },
-    update: { role: "ADMIN", passwordHash: hashPassword(DEMO_PASSWORD) },
+    update: { role: "ADMIN", passwordHash: hashPassword(DEMO_PASSWORD), emailVerifiedAt: new Date() },
     create: {
       email: "admin@example.edu",
       name: "Platform Admin",
       role: "ADMIN",
       majorOrTitle: "Collab Commons administrator",
-      passwordHash: hashPassword(DEMO_PASSWORD)
+      passwordHash: hashPassword(DEMO_PASSWORD),
+      emailVerifiedAt: new Date()
     }
   });
 
@@ -213,6 +216,7 @@ async function main() {
       update: {
         name: project.owner,
         passwordHash: hashPassword(DEMO_PASSWORD),
+        emailVerifiedAt: new Date(),
         department: project.departments[0],
         majorOrTitle: project.ownerRole
       },
@@ -220,6 +224,7 @@ async function main() {
         email: `${project.id}@example.edu`,
         name: project.owner,
         passwordHash: hashPassword(DEMO_PASSWORD),
+        emailVerifiedAt: new Date(),
         role: project.ownerRole === "Student" ? "STUDENT" : "FACULTY",
         department: project.departments[0],
         majorOrTitle: project.ownerRole
